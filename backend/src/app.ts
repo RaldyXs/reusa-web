@@ -1,5 +1,6 @@
 import cors from "cors";
 import express from "express";
+import articuloRouter from "./routes/articulo.routes.js";
 
 const app = express();
 
@@ -12,5 +13,7 @@ app.get("/api/health", (_request, response) => {
     message: "API de Re-Usa Web funcionando correctamente",
   });
 });
+
+app.use("/api/articulos", articuloRouter);
 
 export default app;
