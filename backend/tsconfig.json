@@ -12,6 +12,6 @@
     "resolveJsonModule": true,
     "noUncheckedIndexedAccess": true
   },
-  "include": ["src/**/*.ts"],
+  "include": ["src/**/*.ts", "src/repositories/repository.js"],
   "exclude": ["node_modules", "dist"]
 }
