@@ -1,3 +1,7 @@
+import {
+  Heart,
+  MapPin,
+} from "lucide-react";
 import type { Articulo } from "../interfaces/articulo";
 
 interface ProductCardProps {
@@ -5,51 +9,64 @@ interface ProductCardProps {
 }
 
 function ProductCard({ articulo }: ProductCardProps) {
-  const precioFormateado = Number(articulo.precio).toLocaleString(
-    "es-DO",
-    {
-      style: "currency",
-      currency: "DOP",
-      minimumFractionDigits: 2,
-    },
-  );
+  const precioFormateado = Number(
+    articulo.precio,
+  ).toLocaleString("es-DO", {
+    style: "currency",
+    currency: "DOP",
+    maximumFractionDigits: 0,
+  });
 
   return (
     <article className="product-card">
-      <div className="product-image-container">
+      <div className="product-card__image-container">
         {articulo.imagen_principal ? (
           <img
             src={articulo.imagen_principal}
             alt={articulo.titulo}
-            className="product-image"
+            className="product-card__image"
           />
         ) : (
-          <div className="product-image-placeholder">
+          <div className="product-card__placeholder">
             Sin imagen
           </div>
         )}
+
+        <span className="product-card__condition">
+          {articulo.condicion}
+        </span>
+
+        <button
+          className="product-card__favorite"
+          type="button"
+          aria-label="Guardar artículo"
+        >
+          <Heart size={18} />
+        </button>
       </div>
 
-      <div className="product-card-content">
-        <span className="product-category">
+      <div className="product-card__content">
+        <span className="product-card__category">
           {articulo.categoria}
         </span>
 
         <h2>{articulo.titulo}</h2>
 
-        <p className="product-price">{precioFormateado}</p>
+        <strong className="product-card__price">
+          {precioFormateado}
+        </strong>
 
-        <p className="product-condition">
-          Condición: {articulo.condicion}
-        </p>
+        <div className="product-card__footer">
+          <span>
+            <MapPin size={14} />
+            {articulo.ubicacion ??
+              "Ubicación no indicada"}
+          </span>
 
-        <p className="product-location">
-          {articulo.ubicacion ?? "Ubicación no indicada"}
-        </p>
-
-        <p className="product-seller">
-          Publicado por: {articulo.vendedor}
-        </p>
+          <button type="button">
+            Ver artículo
+          </button>
+        </div>
       </div>
     </article>
   );

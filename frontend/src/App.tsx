@@ -1,8 +1,55 @@
-import Home from "./pages/Home";
+import {
+  BrowserRouter,
+  Navigate,
+  Route,
+  Routes,
+} from "react-router-dom";
 import "./App.css";
+import MainLayout from "./layouts/MainLayout";
+import Categories from "./pages/Categories";
+import Home from "./pages/Home";
+import MyProducts from "./pages/MyProducts";
+import Publish from "./pages/Publish";
+import PurchaseHistory from "./pages/PurchaseHistory";
+import SalesHistory from "./pages/SalesHistory";
+import Saved from "./pages/Saved";
+import Settings from "./pages/Settings";
 
 function App() {
-  return <Home />;
+  return (
+    <BrowserRouter>
+      <MainLayout>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/marketplace" element={<Home />} />
+          <Route path="/categorias" element={<Categories />} />
+          <Route path="/guardados" element={<Saved />} />
+          <Route
+            path="/mis-publicaciones"
+            element={<MyProducts />}
+          />
+          <Route
+            path="/historial-compras"
+            element={<PurchaseHistory />}
+          />
+          <Route
+            path="/historial-ventas"
+            element={<SalesHistory />}
+          />
+          <Route
+            path="/configuracion"
+            element={<Settings />}
+          />
+          <Route path="/publicar" element={<Publish />} />
+
+          <Route
+            path="*"
+            element={<Navigate to="/" replace />}
+          />
+        </Routes>
+      </MainLayout>
+    </BrowserRouter>
+  );
 }
 
 export default App;
