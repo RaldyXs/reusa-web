@@ -9,7 +9,10 @@ import {
   ShoppingBag,
   Tag,
 } from "lucide-react";
-import { NavLink, useNavigate } from "react-router-dom";
+import {
+  NavLink,
+  useNavigate,
+} from "react-router-dom";
 
 const opcionesPrincipales = [
   {
@@ -67,11 +70,20 @@ function Sidebar() {
           <ShoppingBag size={20} />
         </div>
 
-        <div className="sidebar__account-text">
+        <div>
           <strong>Re-Usa Web</strong>
           <span>Marketplace académico</span>
         </div>
       </div>
+
+      <button
+        className="sidebar__create-button"
+        type="button"
+        onClick={() => navigate("/publicar")}
+      >
+        <Plus size={18} />
+        <span>Crear publicación</span>
+      </button>
 
       <nav
         className="sidebar__navigation"
@@ -98,7 +110,9 @@ function Sidebar() {
         })}
       </nav>
 
-      <p className="sidebar__section-title">Mi cuenta</p>
+      <p className="sidebar__section-title">
+        Mi cuenta
+      </p>
 
       <nav
         className="sidebar__navigation"
@@ -123,15 +137,6 @@ function Sidebar() {
           );
         })}
       </nav>
-
-      <button
-        className="sidebar__create-button"
-        type="button"
-        onClick={() => navigate("/publicar")}
-      >
-        <Plus size={18} />
-        <span>Crear publicación</span>
-      </button>
     </aside>
   );
 }

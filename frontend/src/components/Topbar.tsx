@@ -4,17 +4,42 @@ import {
   MessageSquare,
   Search,
 } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import {
+  useState,
+  type FormEvent,
+} from "react";
+import { useNavigate } from "react-router-dom";
 
 function Topbar() {
   const navigate = useNavigate();
+  const [terminoBusqueda, setTerminoBusqueda] =
+    useState("");
+
+  function manejarBusqueda(
+    event: FormEvent<HTMLFormElement>,
+  ) {
+    event.preventDefault();
+
+    const terminoLimpio = terminoBusqueda.trim();
+
+    if (!terminoLimpio) {
+      navigate("/marketplace");
+      return;
+    }
+
+    navigate(
+      `/marketplace?busqueda=${encodeURIComponent(
+        terminoLimpio,
+      )}`,
+    );
+  }
 
   return (
-    <header className="topbar topbar--without-brand">
+    <header className="topbar topbar--simple">
       <form
         className="topbar__search"
         role="search"
-        onSubmit={(event) => event.preventDefault()}
+        onSubmit={manejarBusqueda}
       >
         <Search size={18} />
 
@@ -22,17 +47,17 @@ function Topbar() {
           type="search"
           placeholder="Buscar en Re-Usa..."
           aria-label="Buscar artículos"
+          value={terminoBusqueda}
+          onChange={(event) =>
+            setTerminoBusqueda(event.target.value)
+          }
         />
       </form>
 
       <nav
         className="topbar__navigation"
-        aria-label="Navegación superior"
+        aria-label="Acciones del usuario"
       >
-        <Link to="/categorias" className="topbar__link">
-          Categorías
-        </Link>
-
         <button
           className="topbar__icon-button"
           type="button"
@@ -64,7 +89,7 @@ function Topbar() {
         <button
           className="topbar__avatar"
           type="button"
-          aria-label="Configuración del usuario"
+          aria-label="Abrir configuración"
           title="Configuración"
           onClick={() => navigate("/configuracion")}
         >
