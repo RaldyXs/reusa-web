@@ -1,18 +1,18 @@
 import {
   Car,
-  Home,
+  House,
   Laptop,
   Shirt,
 } from "lucide-react";
 
-const categorias = [
+const categoriasPopulares = [
   {
     nombre: "Electrónica",
     icono: Laptop,
   },
   {
     nombre: "Hogar",
-    icono: Home,
+    icono: House,
   },
   {
     nombre: "Vehículos",
@@ -30,7 +30,10 @@ function FeaturedPanel() {
       <section className="featured-card">
         <div className="featured-card__header">
           <h2>Destacado</h2>
-          <button type="button">Ver todos</button>
+
+          <button type="button">
+            Ver todos
+          </button>
         </div>
 
         <div className="featured-card__product">
@@ -45,14 +48,11 @@ function FeaturedPanel() {
         </div>
       </section>
 
-      <section
-        id="categorias"
-        className="popular-categories"
-      >
+      <section className="popular-categories">
         <h2>Categorías populares</h2>
 
         <div className="popular-categories__list">
-          {categorias.map((categoria) => {
+          {categoriasPopulares.map((categoria) => {
             const Icono = categoria.icono;
 
             return (

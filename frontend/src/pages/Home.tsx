@@ -3,42 +3,13 @@ import { useEffect, useState } from "react";
 
 import FeaturedPanel from "../components/FeaturedPanel";
 import ProductCard from "../components/ProductCard";
-import SearchBar from "../components/SearchBar";
 import type { Articulo } from "../interfaces/articulo";
-import {
-  buscarArticulos,
-  obtenerArticulos,
-} from "../services/articuloService";
+import { obtenerArticulos } from "../services/articuloService";
 
 function Home() {
   const [articulos, setArticulos] = useState<Articulo[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
-
-  async function manejarBusqueda(termino: string) {
-    try {
-      setCargando(true);
-      setError("");
-
-      const terminoLimpio = termino.trim();
-
-      const datos = terminoLimpio
-        ? await buscarArticulos(terminoLimpio)
-        : await obtenerArticulos();
-
-      setArticulos(datos);
-    } catch (errorDesconocido) {
-      const mensaje =
-        errorDesconocido instanceof Error
-          ? errorDesconocido.message
-          : "Ocurrió un error inesperado";
-
-      setError(mensaje);
-      setArticulos([]);
-    } finally {
-      setCargando(false);
-    }
-  }
 
   useEffect(() => {
     let componenteActivo = true;
@@ -97,16 +68,12 @@ function Home() {
           <button
             className="filter-button"
             type="button"
+            aria-label="Abrir filtros"
           >
             <SlidersHorizontal size={17} />
             <span>Filtros</span>
           </button>
         </header>
-
-        <SearchBar
-          onSearch={manejarBusqueda}
-          cargando={cargando}
-        />
 
         {error ? (
           <div className="error-message" role="alert">
@@ -119,7 +86,7 @@ function Home() {
           </p>
         ) : articulos.length === 0 ? (
           <p className="status-message">
-            No se encontraron artículos.
+            No hay artículos disponibles.
           </p>
         ) : (
           <>
@@ -134,7 +101,10 @@ function Home() {
               </span>
             </div>
 
-            <section className="products-grid">
+            <section
+              className="products-grid"
+              aria-label="Publicaciones recientes"
+            >
               {articulos.map((articulo) => (
                 <ProductCard
                   key={articulo.articulo_id}
