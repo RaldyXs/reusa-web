@@ -3,13 +3,19 @@ import {
   MapPin,
   UserRound,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+
 import type { Articulo } from "../interfaces/articulo";
 
 interface ProductCardProps {
   articulo: Articulo;
 }
 
-function ProductCard({ articulo }: ProductCardProps) {
+function ProductCard({
+  articulo,
+}: ProductCardProps) {
+  const navigate = useNavigate();
+
   const precioFormateado = Number(
     articulo.precio,
   ).toLocaleString("es-DO", {
@@ -17,6 +23,10 @@ function ProductCard({ articulo }: ProductCardProps) {
     currency: "DOP",
     maximumFractionDigits: 0,
   });
+
+  function abrirDetalle() {
+    navigate(`/producto/${articulo.articulo_id}`);
+  }
 
   return (
     <article className="product-card">
@@ -61,6 +71,7 @@ function ProductCard({ articulo }: ProductCardProps) {
 
         <div className="product-card__location">
           <MapPin size={14} />
+
           <span>
             {articulo.ubicacion ??
               "Ubicación no indicada"}
@@ -73,10 +84,15 @@ function ProductCard({ articulo }: ProductCardProps) {
               <UserRound size={14} />
             </span>
 
-            <span>Vendedor</span>
+            <span>
+              {articulo.vendedor ?? "Vendedor"}
+            </span>
           </div>
 
-          <button type="button">
+          <button
+            type="button"
+            onClick={abrirDetalle}
+          >
             Ver producto
           </button>
         </div>

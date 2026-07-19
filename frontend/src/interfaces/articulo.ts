@@ -1,24 +1,14 @@
 export interface Articulo {
   articulo_id: number;
   titulo: string;
-  descripcion: string | null;
-  precio: string;
-  condicion: "nuevo" | "reparado" | "usado";
-  ubicacion: string | null;
-  estado: "activo" | "vendido" | "archivado";
-  fecha_publicacion: string;
-
-  categoria_id: number;
+  descripcion?: string | null;
+  precio: number | string;
+  condicion: string;
   categoria: string;
-
-  vendedor_id: number;
-  vendedor: string;
-
-  imagen_principal: string | null;
-}
-
-export interface RespuestaArticulos {
-  ok: boolean;
-  total: number;
-  articulos: Articulo[];
+  categoria_id?: number;
+  ubicacion?: string | null;
+  imagen_principal?: string | null;
+  vendedor?: string | null;
+  usuario_id?: number;
+  fecha_publicacion?: string | null;
 }

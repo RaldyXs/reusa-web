@@ -10,6 +10,7 @@ import MainLayout from "./layouts/MainLayout";
 import Categories from "./pages/Categories";
 import Home from "./pages/Home";
 import MyProducts from "./pages/MyProducts";
+import ProductDetail from "./pages/ProductDetail";
 import Publish from "./pages/Publish";
 import PurchaseHistory from "./pages/PurchaseHistory";
 import SalesHistory from "./pages/SalesHistory";
@@ -32,6 +33,11 @@ function App() {
           <Route
             path="/categorias"
             element={<Categories />}
+          />
+
+          <Route
+            path="/producto/:id"
+            element={<ProductDetail />}
           />
 
           <Route

@@ -1,20 +1,32 @@
-import type {
-  Articulo,
-  RespuestaArticulos,
-} from "../interfaces/articulo";
+import type { Articulo } from "../interfaces/articulo";
 
 const API_URL = "http://localhost:3000/api/articulos";
 
-export async function obtenerArticulos(): Promise<Articulo[]> {
-  const respuesta = await fetch(API_URL);
+interface ArticulosResponse {
+  ok: boolean;
+  total: number;
+  articulos: Articulo[];
+  message?: string;
+}
 
-  if (!respuesta.ok) {
-    throw new Error("No se pudieron obtener los artículos");
+interface ArticuloResponse {
+  ok: boolean;
+  articulo: Articulo;
+  message?: string;
+}
+
+export async function obtenerArticulos(): Promise<Articulo[]> {
+  const response = await fetch(API_URL);
+
+  const data = (await response.json()) as ArticulosResponse;
+
+  if (!response.ok || !data.ok) {
+    throw new Error(
+      data.message ?? "No se pudieron obtener los artículos",
+    );
   }
 
-  const datos: RespuestaArticulos = await respuesta.json();
-
-  return datos.articulos;
+  return data.articulos;
 }
 
 export async function buscarArticulos(
@@ -22,21 +34,37 @@ export async function buscarArticulos(
 ): Promise<Articulo[]> {
   const parametros = new URLSearchParams();
 
-  if (termino.trim()) {
-    parametros.set("termino", termino.trim());
+  parametros.set("termino", termino);
+
+  const response = await fetch(
+    `${API_URL}?${parametros.toString()}`,
+  );
+
+  const data = (await response.json()) as ArticulosResponse;
+
+  if (!response.ok || !data.ok) {
+    throw new Error(
+      data.message ?? "No se pudo realizar la búsqueda",
+    );
   }
 
-  const url = parametros.toString()
-    ? `${API_URL}?${parametros.toString()}`
-    : API_URL;
+  return data.articulos;
+}
 
-  const respuesta = await fetch(url);
+export async function obtenerArticuloPorId(
+  articuloId: number,
+): Promise<Articulo> {
+  const response = await fetch(
+    `${API_URL}/${articuloId}`,
+  );
 
-  if (!respuesta.ok) {
-    throw new Error("No se pudo realizar la búsqueda");
+  const data = (await response.json()) as ArticuloResponse;
+
+  if (!response.ok || !data.ok) {
+    throw new Error(
+      data.message ?? "No se pudo obtener el artículo",
+    );
   }
 
-  const datos: RespuestaArticulos = await respuesta.json();
-
-  return datos.articulos;
+  return data.articulo;
 }
