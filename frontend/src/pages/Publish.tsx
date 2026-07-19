@@ -1,5 +1,16 @@
-import { ImagePlus, MapPin, Upload } from "lucide-react";
-import { useState, type ChangeEvent, type FormEvent } from "react";
+import {
+  ImagePlus,
+  MapPin,
+  Upload,
+} from "lucide-react";
+import {
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+} from "react";
+import { useNavigate } from "react-router-dom";
+
+import { crearArticulo } from "../services/articuloService";
 
 interface VistaPrevia {
   archivo: File;
@@ -7,10 +18,20 @@ interface VistaPrevia {
 }
 
 function Publish() {
-  const [imagenes, setImagenes] = useState<VistaPrevia[]>([]);
+  const navigate = useNavigate();
 
-  function manejarImagenes(event: ChangeEvent<HTMLInputElement>) {
-    const archivos = Array.from(event.target.files ?? []);
+  const [imagenes, setImagenes] = useState<VistaPrevia[]>([]);
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState("");
+  const [mensaje, setMensaje] = useState("");
+
+  function manejarImagenes(
+    event: ChangeEvent<HTMLInputElement>,
+  ) {
+    const archivos = Array.from(
+      event.target.files ?? [],
+    );
+
     const disponibles = 5 - imagenes.length;
 
     const nuevasImagenes = archivos
@@ -36,12 +57,104 @@ function Publish() {
     });
   }
 
-  function manejarEnvio(event: FormEvent<HTMLFormElement>) {
+  async function manejarEnvio(
+    event: FormEvent<HTMLFormElement>,
+  ) {
     event.preventDefault();
 
-    console.log("Formulario preparado", {
-      cantidadImagenes: imagenes.length,
-    });
+    const formulario = new FormData(event.currentTarget);
+
+    const titulo = String(
+      formulario.get("titulo") ?? "",
+    ).trim();
+
+    const descripcion = String(
+      formulario.get("descripcion") ?? "",
+    ).trim();
+
+    const categoriaId = Number(
+      formulario.get("categoria"),
+    );
+
+    const condicion = String(
+      formulario.get("condicion") ?? "",
+    ) as "nuevo" | "usado" | "reparado";
+
+    const precio = Number(
+      formulario.get("precio"),
+    );
+
+    const ubicacion = String(
+      formulario.get("ubicacion") ?? "",
+    ).trim();
+
+    setError("");
+    setMensaje("");
+
+    if (titulo.length < 3) {
+      setError(
+        "El título debe tener al menos 3 caracteres.",
+      );
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
+    if (
+      !Number.isInteger(categoriaId) ||
+      categoriaId < 1
+    ) {
+      setError("Debes seleccionar una categoría.");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
+    if (descripcion.length < 10) {
+      setError(
+        "La descripción debe tener al menos 10 caracteres.",
+      );
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
+    if (!Number.isFinite(precio) || precio <= 0) {
+      setError("El precio debe ser mayor que cero.");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
+    if (!ubicacion) {
+      setError("La ubicación es obligatoria.");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
+    try {
+      setGuardando(true);
+
+      const articulo = await crearArticulo({
+        titulo,
+        descripcion,
+        precio,
+        condicion,
+        ubicacion,
+        categoriaId,
+        vendedorId: 1,
+      });
+
+      setMensaje("Artículo publicado correctamente.");
+
+      navigate(`/producto/${articulo.articulo_id}`);
+    } catch (errorDesconocido) {
+      const mensajeError =
+        errorDesconocido instanceof Error
+          ? errorDesconocido.message
+          : "Ocurrió un error inesperado";
+
+      setError(mensajeError);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } finally {
+      setGuardando(false);
+    }
   }
 
   return (
@@ -55,9 +168,22 @@ function Publish() {
         </p>
       </header>
 
+      {error && (
+        <div className="error-message" role="alert">
+          {error}
+        </div>
+      )}
+
+      {mensaje && (
+        <div className="publish-success" role="status">
+          {mensaje}
+        </div>
+      )}
+
       <form
         className="publish-layout"
         onSubmit={manejarEnvio}
+        noValidate
       >
         <div className="publish-layout__main">
           <section className="form-card">
@@ -80,7 +206,9 @@ function Publish() {
                 Haz clic para seleccionar imágenes
               </strong>
 
-              <span>JPG, PNG o WEBP. Máximo 5 imágenes.</span>
+              <span>
+                JPG, PNG o WEBP. Máximo 5 imágenes.
+              </span>
 
               <input
                 type="file"
@@ -133,18 +261,18 @@ function Publish() {
             <div className="form-grid">
               <label className="form-field form-field--full">
                 <span>Título del artículo</span>
+
                 <input
                   type="text"
                   name="titulo"
                   placeholder="Ej. Laptop Dell Inspiron"
-                  required
                 />
               </label>
 
               <label className="form-field">
                 <span>Categoría</span>
 
-                <select name="categoria" required>
+                <select name="categoria">
                   <option value="">
                     Selecciona una categoría
                   </option>
@@ -158,7 +286,7 @@ function Publish() {
               <label className="form-field">
                 <span>Condición</span>
 
-                <select name="condicion" required>
+                <select name="condicion">
                   <option value="nuevo">Nuevo</option>
                   <option value="usado">Usado</option>
                   <option value="reparado">Reparado</option>
@@ -172,7 +300,6 @@ function Publish() {
                   name="descripcion"
                   rows={6}
                   placeholder="Describe las características y el estado del artículo..."
-                  required
                 />
               </label>
             </div>
@@ -192,10 +319,9 @@ function Publish() {
                 <input
                   type="number"
                   name="precio"
-                  min="0"
+                  min="1"
                   step="0.01"
                   placeholder="0.00"
-                  required
                 />
               </div>
             </label>
@@ -214,7 +340,6 @@ function Publish() {
                   type="text"
                   name="ubicacion"
                   placeholder="Los Alcarrizos"
-                  required
                 />
               </div>
             </label>
@@ -230,8 +355,14 @@ function Publish() {
             </label>
           </section>
 
-          <button className="publish-submit" type="submit">
-            Publicar artículo
+          <button
+            className="publish-submit"
+            type="submit"
+            disabled={guardando}
+          >
+            {guardando
+              ? "Publicando..."
+              : "Publicar artículo"}
           </button>
 
           <button
