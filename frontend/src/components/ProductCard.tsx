@@ -3,18 +3,55 @@ import {
   MapPin,
   UserRound,
 } from "lucide-react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import type { Articulo } from "../interfaces/articulo";
 
+const CLAVE_GUARDADOS = "reusa-articulos-guardados";
+
 interface ProductCardProps {
   articulo: Articulo;
+  onSavedChange?: (
+    articuloId: number,
+    guardado: boolean,
+  ) => void;
+}
+
+function obtenerIdsGuardados(): number[] {
+  try {
+    const valorGuardado = localStorage.getItem(CLAVE_GUARDADOS);
+
+    if (!valorGuardado) {
+      return [];
+    }
+
+    const resultado = JSON.parse(valorGuardado) as unknown;
+
+    if (!Array.isArray(resultado)) {
+      return [];
+    }
+
+    return resultado.map(Number);
+  } catch {
+    return [];
+  }
 }
 
 function ProductCard({
   articulo,
+  onSavedChange,
 }: ProductCardProps) {
   const navigate = useNavigate();
+
+const [guardado, setGuardado] = useState(() => {
+  const idsGuardados = obtenerIdsGuardados();
+
+  return idsGuardados.includes(
+    Number(articulo.articulo_id),
+  );
+});
+  
 
   const precioFormateado = Number(
     articulo.precio,
@@ -26,6 +63,28 @@ function ProductCard({
 
   function abrirDetalle() {
     navigate(`/producto/${articulo.articulo_id}`);
+  }
+
+  function alternarGuardado() {
+    const articuloId = Number(articulo.articulo_id);
+    const idsGuardados = obtenerIdsGuardados();
+
+    const yaEstaGuardado =
+      idsGuardados.includes(articuloId);
+
+    const nuevosIds = yaEstaGuardado
+      ? idsGuardados.filter((id) => id !== articuloId)
+      : [...idsGuardados, articuloId];
+
+    localStorage.setItem(
+      CLAVE_GUARDADOS,
+      JSON.stringify(nuevosIds),
+    );
+
+    const nuevoEstado = !yaEstaGuardado;
+
+    setGuardado(nuevoEstado);
+    onSavedChange?.(articuloId, nuevoEstado);
   }
 
   return (
@@ -48,11 +107,28 @@ function ProductCard({
         </span>
 
         <button
-          className="product-card__favorite"
+          className={
+            guardado
+              ? "product-card__favorite product-card__favorite--active"
+              : "product-card__favorite"
+          }
           type="button"
-          aria-label={`Guardar ${articulo.titulo}`}
+          aria-label={
+            guardado
+              ? `Quitar ${articulo.titulo} de guardados`
+              : `Guardar ${articulo.titulo}`
+          }
+          title={
+            guardado
+              ? "Quitar de guardados"
+              : "Guardar artículo"
+          }
+          onClick={alternarGuardado}
         >
-          <Heart size={18} />
+          <Heart
+            size={18}
+            fill={guardado ? "currentColor" : "none"}
+          />
         </button>
       </div>
 
