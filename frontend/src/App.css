@@ -1937,3 +1937,233 @@ button {
     grid-template-columns: 1fr;
   }
 }
+
+/* =========================================================
+   MIS PUBLICACIONES
+   ========================================================= */
+
+.my-products-page {
+  width: 100%;
+}
+
+.my-products-header {
+  display: flex;
+  margin-bottom: 24px;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.my-products-header > div > span {
+  color: var(--blue);
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.my-products-header h1 {
+  margin: 6px 0 7px;
+  font-size: 36px;
+}
+
+.my-products-header p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.my-products-header > button {
+  display: inline-flex;
+  min-height: 43px;
+  padding: 0 17px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--blue);
+  color: #fff;
+  align-items: center;
+  gap: 8px;
+  font-weight: 750;
+}
+
+.my-products-summary {
+  display: grid;
+  margin-bottom: 24px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 15px;
+}
+
+.my-products-summary article {
+  display: flex;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--blue);
+  align-items: center;
+  gap: 13px;
+}
+
+.my-products-summary article > div {
+  display: flex;
+  flex-direction: column;
+}
+
+.my-products-summary strong {
+  color: var(--text);
+  font-size: 22px;
+}
+
+.my-products-summary span {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.my-products-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.my-product-card {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: #fff;
+}
+
+.my-product-card__image {
+  position: relative;
+  display: grid;
+  width: 100%;
+  aspect-ratio: 1.45 / 1;
+  overflow: hidden;
+  background: #e8edf5;
+  color: #8c96a5;
+  font-size: 20px;
+  font-weight: 700;
+  text-align: center;
+  place-items: center;
+}
+
+.my-product-card__image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.my-product-card__status {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 5px 8px;
+  border-radius: 6px;
+  background: #eaf1ff;
+  color: var(--blue);
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.my-product-card__status--vendido {
+  background: #eaf9ef;
+  color: #278447;
+}
+
+.my-product-card__status--archivado {
+  background: #f0f1f4;
+  color: #687386;
+}
+
+.my-product-card__content {
+  padding: 15px;
+}
+
+.my-product-card__content > span {
+  color: var(--blue);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.my-product-card__content h2 {
+  margin: 7px 0;
+  font-size: 15px;
+}
+
+.my-product-card__content > strong {
+  color: var(--blue);
+  font-size: 20px;
+}
+
+.my-product-card__actions {
+  display: grid;
+  margin-top: 15px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.my-product-card__actions button {
+  display: flex;
+  min-height: 35px;
+  padding: 0 5px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: #fff;
+  color: #5c687c;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  font-size: 10px;
+}
+
+.my-product-card__actions button:hover {
+  color: var(--blue);
+}
+
+.my-products-empty {
+  padding: 60px 25px;
+  border: 1px dashed #cad5e6;
+  border-radius: 12px;
+  background: #fff;
+  color: var(--muted);
+  text-align: center;
+}
+
+.my-products-empty h2 {
+  color: var(--text);
+}
+
+.my-products-empty button {
+  min-height: 41px;
+  padding: 0 17px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--blue);
+  color: #fff;
+}
+
+@media (max-width: 950px) {
+  .my-products-summary,
+  .my-products-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 580px) {
+  .my-products-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .my-products-header > button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .my-products-summary,
+  .my-products-grid {
+    grid-template-columns: 1fr;
+  }
+}
