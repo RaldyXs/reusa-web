@@ -4,10 +4,12 @@ import {
   Route,
   Routes,
 } from "react-router-dom";
+
 import "./App.css";
 
 import MainLayout from "./layouts/MainLayout";
 import Categories from "./pages/Categories";
+import EditPublication from "./pages/EditPublication";
 import Home from "./pages/Home";
 import MyProducts from "./pages/MyProducts";
 import ProductDetail from "./pages/ProductDetail";
@@ -68,6 +70,11 @@ function App() {
           <Route
             path="/publicar"
             element={<Publish />}
+          />
+
+          <Route
+            path="/editar-publicacion/:id"
+            element={<EditPublication />}
           />
 
           <Route

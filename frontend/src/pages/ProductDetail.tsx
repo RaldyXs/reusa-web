@@ -23,6 +23,9 @@ function ProductDetail() {
   const [articulo, setArticulo] =
     useState<Articulo | null>(null);
 
+  const [imagenSeleccionada, setImagenSeleccionada] =
+    useState<string | null>(null);
+
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
 
@@ -45,13 +48,20 @@ function ProductDetail() {
           );
         }
 
-        const datos = await obtenerArticuloPorId(
-          articuloId,
-        );
+        const datos =
+          await obtenerArticuloPorId(articuloId);
 
-        if (componenteActivo) {
-          setArticulo(datos);
+        if (!componenteActivo) {
+          return;
         }
+
+        setArticulo(datos);
+
+        setImagenSeleccionada(
+          datos.imagenes?.[0] ??
+            datos.imagen_principal ??
+            null,
+        );
       } catch (errorDesconocido) {
         const mensaje =
           errorDesconocido instanceof Error
@@ -61,6 +71,7 @@ function ProductDetail() {
         if (componenteActivo) {
           setError(mensaje);
           setArticulo(null);
+          setImagenSeleccionada(null);
         }
       } finally {
         if (componenteActivo) {
@@ -109,6 +120,14 @@ function ProductDetail() {
     maximumFractionDigits: 0,
   });
 
+  const imagenes =
+    articulo.imagenes &&
+    articulo.imagenes.length > 0
+      ? articulo.imagenes
+      : articulo.imagen_principal
+        ? [articulo.imagen_principal]
+        : [];
+
   return (
     <section className="product-detail-page">
       <button
@@ -123,9 +142,9 @@ function ProductDetail() {
       <div className="product-detail-layout">
         <div className="product-detail-gallery">
           <div className="product-detail-main-image">
-            {articulo.imagen_principal ? (
+            {imagenSeleccionada ? (
               <img
-                src={articulo.imagen_principal}
+                src={imagenSeleccionada}
                 alt={articulo.titulo}
               />
             ) : (
@@ -139,22 +158,30 @@ function ProductDetail() {
             </span>
           </div>
 
-          <div className="product-detail-thumbnails">
-            <button type="button">
-              {articulo.imagen_principal ? (
-                <img
-                  src={articulo.imagen_principal}
-                  alt=""
-                />
-              ) : (
-                <span>Sin imagen</span>
-              )}
-            </button>
-
-            <button type="button" disabled />
-            <button type="button" disabled />
-            <button type="button" disabled />
-          </div>
+          {imagenes.length > 0 && (
+            <div className="product-detail-thumbnails">
+              {imagenes.map((imagen, indice) => (
+                <button
+                  type="button"
+                  key={`${imagen}-${indice}`}
+                  className={
+                    imagenSeleccionada === imagen
+                      ? "product-detail-thumbnail product-detail-thumbnail--active"
+                      : "product-detail-thumbnail"
+                  }
+                  onClick={() =>
+                    setImagenSeleccionada(imagen)
+                  }
+                  aria-label={`Mostrar imagen ${indice + 1}`}
+                >
+                  <img
+                    src={imagen}
+                    alt={`${articulo.titulo} ${indice + 1}`}
+                  />
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <aside className="product-detail-information">
@@ -237,6 +264,7 @@ function ProductDetail() {
 
             <div>
               <span>Vendido por</span>
+
               <strong>
                 {articulo.vendedor ?? "Vendedor"}
               </strong>

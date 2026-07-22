@@ -10,7 +10,11 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import type { Articulo } from "../interfaces/articulo";
-import { obtenerArticulos } from "../services/articuloService";
+import {
+  actualizarEstadoArticulo,
+  obtenerArticulos,
+  type EstadoArticulo,
+} from "../services/articuloService";
 
 function MyProducts() {
   const navigate = useNavigate();
@@ -18,6 +22,8 @@ function MyProducts() {
   const [articulos, setArticulos] = useState<Articulo[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
+  const [articuloProcesando, setArticuloProcesando] =
+    useState<number | null>(null);
 
   useEffect(() => {
     let componenteActivo = true;
@@ -60,6 +66,38 @@ function MyProducts() {
     };
   }, []);
 
+  async function cambiarEstado(
+    articuloId: number,
+    estado: EstadoArticulo,
+  ): Promise<void> {
+    try {
+      setError("");
+      setArticuloProcesando(articuloId);
+
+      const articuloActualizado =
+        await actualizarEstadoArticulo(
+          articuloId,
+          estado,
+        );
+
+      setArticulos((articulosActuales) =>
+        articulosActuales.map((articulo) =>
+          articulo.articulo_id === articuloId
+            ? articuloActualizado
+            : articulo,
+        ),
+      );
+    } catch (errorDesconocido) {
+      setError(
+        errorDesconocido instanceof Error
+          ? errorDesconocido.message
+          : "No se pudo actualizar la publicación",
+      );
+    } finally {
+      setArticuloProcesando(null);
+    }
+  }
+
   const activas = articulos.filter(
     (articulo) => articulo.estado === "activo",
   ).length;
@@ -77,10 +115,12 @@ function MyProducts() {
       <header className="my-products-header">
         <div>
           <span>Mi cuenta</span>
+
           <h1>Mis publicaciones</h1>
+
           <p>
-            Administra tus artículos, revisa su estado y crea nuevas
-            publicaciones.
+            Administra tus artículos, revisa su estado y crea
+            nuevas publicaciones.
           </p>
         </div>
 
@@ -96,6 +136,7 @@ function MyProducts() {
       <div className="my-products-summary">
         <article>
           <Package size={20} />
+
           <div>
             <strong>{articulos.length}</strong>
             <span>Total</span>
@@ -104,6 +145,7 @@ function MyProducts() {
 
         <article>
           <Eye size={20} />
+
           <div>
             <strong>{activas}</strong>
             <span>Activas</span>
@@ -112,6 +154,7 @@ function MyProducts() {
 
         <article>
           <Tag size={20} />
+
           <div>
             <strong>{vendidas}</strong>
             <span>Vendidas</span>
@@ -120,6 +163,7 @@ function MyProducts() {
 
         <article>
           <Archive size={20} />
+
           <div>
             <strong>{archivadas}</strong>
             <span>Archivadas</span>
@@ -164,6 +208,15 @@ function MyProducts() {
               maximumFractionDigits: 0,
             });
 
+            const estadoActual =
+              articulo.estado ?? "activo";
+
+            const estaArchivado =
+              estadoActual === "archivado";
+
+            const estaProcesando =
+              articuloProcesando === articulo.articulo_id;
+
             return (
               <article
                 className="my-product-card"
@@ -180,9 +233,9 @@ function MyProducts() {
                   )}
 
                   <small
-                    className={`my-product-card__status my-product-card__status--${articulo.estado}`}
+                    className={`my-product-card__status my-product-card__status--${estadoActual}`}
                   >
-                    {articulo.estado}
+                    {estadoActual}
                   </small>
                 </div>
 
@@ -206,14 +259,37 @@ function MyProducts() {
                       Ver
                     </button>
 
-                    <button type="button">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        navigate(
+                          `/editar-publicacion/${articulo.articulo_id}`,
+                        )
+                      }
+                    >
                       <Pencil size={16} />
                       Editar
                     </button>
 
-                    <button type="button">
+                    <button
+                      type="button"
+                      disabled={estaProcesando}
+                      onClick={() =>
+                        void cambiarEstado(
+                          articulo.articulo_id,
+                          estaArchivado
+                            ? "activo"
+                            : "archivado",
+                        )
+                      }
+                    >
                       <Archive size={16} />
-                      Archivar
+
+                      {estaProcesando
+                        ? "Guardando..."
+                        : estaArchivado
+                          ? "Activar"
+                          : "Archivar"}
                     </button>
                   </div>
                 </div>

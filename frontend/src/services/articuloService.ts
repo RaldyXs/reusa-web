@@ -15,6 +15,13 @@ interface ArticuloResponse {
   message?: string;
 }
 
+interface SubirImagenesResponse {
+  ok: boolean;
+  articulo?: Articulo;
+  imagenes?: string[];
+  message?: string;
+}
+
 export interface CrearArticuloDatos {
   titulo: string;
   descripcion: string;
@@ -25,13 +32,50 @@ export interface CrearArticuloDatos {
   vendedorId: number;
 }
 
+export interface ActualizarArticuloDatos {
+  titulo: string;
+  descripcion: string;
+  precio: number;
+  condicion: "nuevo" | "usado" | "reparado";
+  ubicacion: string;
+  categoriaId: number;
+}
+
+export type EstadoArticulo =
+  | "activo"
+  | "vendido"
+  | "archivado";
+
+async function leerRespuestaArticulo(
+  response: Response,
+  mensajePredeterminado: string,
+): Promise<Articulo> {
+  const resultado =
+    (await response.json()) as ArticuloResponse;
+
+  if (
+    !response.ok ||
+    !resultado.ok ||
+    !resultado.articulo
+  ) {
+    throw new Error(
+      resultado.message ?? mensajePredeterminado,
+    );
+  }
+
+  return resultado.articulo;
+}
+
 export async function obtenerArticulos(): Promise<Articulo[]> {
   const response = await fetch(API_URL);
-  const data = (await response.json()) as ArticulosResponse;
+
+  const data =
+    (await response.json()) as ArticulosResponse;
 
   if (!response.ok || !data.ok) {
     throw new Error(
-      data.message ?? "No se pudieron obtener los artículos",
+      data.message ??
+        "No se pudieron obtener los artículos",
     );
   }
 
@@ -42,17 +86,20 @@ export async function buscarArticulos(
   termino: string,
 ): Promise<Articulo[]> {
   const parametros = new URLSearchParams();
+
   parametros.set("termino", termino);
 
   const response = await fetch(
     `${API_URL}?${parametros.toString()}`,
   );
 
-  const data = (await response.json()) as ArticulosResponse;
+  const data =
+    (await response.json()) as ArticulosResponse;
 
   if (!response.ok || !data.ok) {
     throw new Error(
-      data.message ?? "No se pudo realizar la búsqueda",
+      data.message ??
+        "No se pudo realizar la búsqueda",
     );
   }
 
@@ -62,16 +109,14 @@ export async function buscarArticulos(
 export async function obtenerArticuloPorId(
   articuloId: number,
 ): Promise<Articulo> {
-  const response = await fetch(`${API_URL}/${articuloId}`);
-  const data = (await response.json()) as ArticuloResponse;
+  const response = await fetch(
+    `${API_URL}/${articuloId}`,
+  );
 
-  if (!response.ok || !data.ok || !data.articulo) {
-    throw new Error(
-      data.message ?? "No se pudo obtener el artículo",
-    );
-  }
-
-  return data.articulo;
+  return leerRespuestaArticulo(
+    response,
+    "No se pudo obtener el artículo",
+  );
 }
 
 export async function crearArticulo(
@@ -85,7 +130,84 @@ export async function crearArticulo(
     body: JSON.stringify(datos),
   });
 
-  const resultado = (await response.json()) as ArticuloResponse;
+  return leerRespuestaArticulo(
+    response,
+    "No se pudo publicar el artículo",
+  );
+}
+
+export async function actualizarArticulo(
+  articuloId: number,
+  datos: ActualizarArticuloDatos,
+): Promise<Articulo> {
+  const response = await fetch(
+    `${API_URL}/${articuloId}`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(datos),
+    },
+  );
+
+  return leerRespuestaArticulo(
+    response,
+    "No se pudo actualizar el artículo",
+  );
+}
+
+export async function actualizarEstadoArticulo(
+  articuloId: number,
+  estado: EstadoArticulo,
+): Promise<Articulo> {
+  const response = await fetch(
+    `${API_URL}/${articuloId}/estado`,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ estado }),
+    },
+  );
+
+  return leerRespuestaArticulo(
+    response,
+    "No se pudo actualizar el estado del artículo",
+  );
+}
+
+export async function subirImagenesArticulo(
+  articuloId: number,
+  archivos: File[],
+): Promise<Articulo> {
+  if (archivos.length === 0) {
+    return obtenerArticuloPorId(articuloId);
+  }
+
+  if (archivos.length > 5) {
+    throw new Error(
+      "Solo puedes subir un máximo de cinco imágenes",
+    );
+  }
+
+  const formulario = new FormData();
+
+  archivos.forEach((archivo) => {
+    formulario.append("imagenes", archivo);
+  });
+
+  const response = await fetch(
+    `${API_URL}/${articuloId}/imagenes`,
+    {
+      method: "POST",
+      body: formulario,
+    },
+  );
+
+  const resultado =
+    (await response.json()) as SubirImagenesResponse;
 
   if (
     !response.ok ||
@@ -94,9 +216,30 @@ export async function crearArticulo(
   ) {
     throw new Error(
       resultado.message ??
-        "No se pudo publicar el artículo",
+        "No se pudieron guardar las imágenes",
     );
   }
 
   return resultado.articulo;
+}
+
+export async function eliminarImagenArticulo(
+  articuloId: number,
+  urlImagen: string,
+): Promise<Articulo> {
+  const response = await fetch(
+    `${API_URL}/${articuloId}/imagenes`,
+    {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ urlImagen }),
+    },
+  );
+
+  return leerRespuestaArticulo(
+    response,
+    "No se pudo eliminar la imagen",
+  );
 }

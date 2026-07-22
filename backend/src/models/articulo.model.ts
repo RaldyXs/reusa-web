@@ -17,4 +17,15 @@ export interface Articulo extends RowDataPacket {
   vendedor: string;
 
   imagen_principal: string | null;
+  imagenes: string[];
+}
+
+export interface CrearArticuloDatos {
+  titulo: string;
+  descripcion: string;
+  precio: number;
+  condicion: "nuevo" | "reparado" | "usado";
+  ubicacion: string;
+  categoriaId: number;
+  vendedorId: number;
 }

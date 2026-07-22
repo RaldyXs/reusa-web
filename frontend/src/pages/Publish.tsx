@@ -4,13 +4,17 @@ import {
   Upload,
 } from "lucide-react";
 import {
+  useEffect,
   useState,
   type ChangeEvent,
   type FormEvent,
 } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { crearArticulo } from "../services/articuloService";
+import {
+  crearArticulo,
+  subirImagenesArticulo,
+} from "../services/articuloService";
 
 interface VistaPrevia {
   archivo: File;
@@ -24,6 +28,14 @@ function Publish() {
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState("");
   const [mensaje, setMensaje] = useState("");
+
+  useEffect(() => {
+    return () => {
+      imagenes.forEach((imagen) => {
+        URL.revokeObjectURL(imagen.url);
+      });
+    };
+  }, [imagenes]);
 
   function manejarImagenes(
     event: ChangeEvent<HTMLInputElement>,
@@ -45,11 +57,17 @@ function Publish() {
       ...actuales,
       ...nuevasImagenes,
     ]);
+
+    event.target.value = "";
   }
 
   function eliminarImagen(indice: number) {
     setImagenes((actuales) => {
-      URL.revokeObjectURL(actuales[indice].url);
+      const imagenEliminada = actuales[indice];
+
+      if (imagenEliminada) {
+        URL.revokeObjectURL(imagenEliminada.url);
+      }
 
       return actuales.filter(
         (_imagen, posicion) => posicion !== indice,
@@ -95,7 +113,12 @@ function Publish() {
       setError(
         "El título debe tener al menos 3 caracteres.",
       );
-      window.scrollTo({ top: 0, behavior: "smooth" });
+
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
+
       return;
     }
 
@@ -104,7 +127,12 @@ function Publish() {
       categoriaId < 1
     ) {
       setError("Debes seleccionar una categoría.");
-      window.scrollTo({ top: 0, behavior: "smooth" });
+
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
+
       return;
     }
 
@@ -112,19 +140,34 @@ function Publish() {
       setError(
         "La descripción debe tener al menos 10 caracteres.",
       );
-      window.scrollTo({ top: 0, behavior: "smooth" });
+
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
+
       return;
     }
 
     if (!Number.isFinite(precio) || precio <= 0) {
       setError("El precio debe ser mayor que cero.");
-      window.scrollTo({ top: 0, behavior: "smooth" });
+
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
+
       return;
     }
 
     if (!ubicacion) {
       setError("La ubicación es obligatoria.");
-      window.scrollTo({ top: 0, behavior: "smooth" });
+
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
+
       return;
     }
 
@@ -141,9 +184,22 @@ function Publish() {
         vendedorId: 1,
       });
 
-      setMensaje("Artículo publicado correctamente.");
+      let articuloFinal = articulo;
 
-      navigate(`/producto/${articulo.articulo_id}`);
+      if (imagenes.length > 0) {
+        articuloFinal = await subirImagenesArticulo(
+          articulo.articulo_id,
+          imagenes.map((imagen) => imagen.archivo),
+        );
+      }
+
+      setMensaje(
+        "Artículo publicado correctamente.",
+      );
+
+      navigate(
+        `/producto/${articuloFinal.articulo_id}`,
+      );
     } catch (errorDesconocido) {
       const mensajeError =
         errorDesconocido instanceof Error
@@ -151,7 +207,11 @@ function Publish() {
           : "Ocurrió un error inesperado";
 
       setError(mensajeError);
-      window.scrollTo({ top: 0, behavior: "smooth" });
+
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
     } finally {
       setGuardando(false);
     }
@@ -161,7 +221,9 @@ function Publish() {
     <section className="publish-page">
       <header className="publish-page__header">
         <span>Marketplace</span>
+
         <h1>Publicar artículo</h1>
+
         <p>
           Completa los detalles para publicar tu producto en
           Re-Usa Web.
@@ -192,6 +254,7 @@ function Publish() {
 
               <div>
                 <h2>Imágenes del producto</h2>
+
                 <p>
                   Sube hasta cinco imágenes. La primera será la
                   portada.
@@ -239,7 +302,9 @@ function Publish() {
 
                     <button
                       type="button"
-                      onClick={() => eliminarImagen(indice)}
+                      onClick={() =>
+                        eliminarImagen(indice)
+                      }
                       aria-label="Eliminar imagen"
                     >
                       ×
@@ -254,7 +319,10 @@ function Publish() {
             <div className="form-card__title">
               <div>
                 <h2>Detalles generales</h2>
-                <p>Describe correctamente el artículo.</p>
+
+                <p>
+                  Describe correctamente el artículo.
+                </p>
               </div>
             </div>
 
@@ -276,10 +344,22 @@ function Publish() {
                   <option value="">
                     Selecciona una categoría
                   </option>
-                  <option value="1">Electrónica</option>
-                  <option value="2">Hogar</option>
-                  <option value="3">Vehículos</option>
-                  <option value="4">Ropa</option>
+
+                  <option value="1">
+                    Electrónica
+                  </option>
+
+                  <option value="2">
+                    Hogar
+                  </option>
+
+                  <option value="3">
+                    Vehículos
+                  </option>
+
+                  <option value="4">
+                    Ropa
+                  </option>
                 </select>
               </label>
 
@@ -287,9 +367,17 @@ function Publish() {
                 <span>Condición</span>
 
                 <select name="condicion">
-                  <option value="nuevo">Nuevo</option>
-                  <option value="usado">Usado</option>
-                  <option value="reparado">Reparado</option>
+                  <option value="nuevo">
+                    Nuevo
+                  </option>
+
+                  <option value="usado">
+                    Usado
+                  </option>
+
+                  <option value="reparado">
+                    Reparado
+                  </option>
                 </select>
               </label>
 
@@ -311,7 +399,9 @@ function Publish() {
             <h2>Precio</h2>
 
             <label className="form-field">
-              <span>Precio en pesos dominicanos</span>
+              <span>
+                Precio en pesos dominicanos
+              </span>
 
               <div className="price-input">
                 <span>RD$</span>
