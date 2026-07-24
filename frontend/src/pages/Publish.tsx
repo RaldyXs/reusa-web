@@ -4,7 +4,6 @@ import {
   Upload,
 } from "lucide-react";
 import {
-  useEffect,
   useState,
   type ChangeEvent,
   type FormEvent,
@@ -24,18 +23,14 @@ interface VistaPrevia {
 function Publish() {
   const navigate = useNavigate();
 
-  const [imagenes, setImagenes] = useState<VistaPrevia[]>([]);
-  const [guardando, setGuardando] = useState(false);
+  const [imagenes, setImagenes] =
+    useState<VistaPrevia[]>([]);
+
+  const [guardando, setGuardando] =
+    useState(false);
+
   const [error, setError] = useState("");
   const [mensaje, setMensaje] = useState("");
-
-  useEffect(() => {
-    return () => {
-      imagenes.forEach((imagen) => {
-        URL.revokeObjectURL(imagen.url);
-      });
-    };
-  }, [imagenes]);
 
   function manejarImagenes(
     event: ChangeEvent<HTMLInputElement>,
@@ -66,11 +61,14 @@ function Publish() {
       const imagenEliminada = actuales[indice];
 
       if (imagenEliminada) {
-        URL.revokeObjectURL(imagenEliminada.url);
+        URL.revokeObjectURL(
+          imagenEliminada.url,
+        );
       }
 
       return actuales.filter(
-        (_imagen, posicion) => posicion !== indice,
+        (_imagen, posicion) =>
+          posicion !== indice,
       );
     });
   }
@@ -80,30 +78,32 @@ function Publish() {
   ) {
     event.preventDefault();
 
-    const formulario = new FormData(event.currentTarget);
+    const datosFormulario = new FormData(
+      event.currentTarget,
+    );
 
     const titulo = String(
-      formulario.get("titulo") ?? "",
+      datosFormulario.get("titulo") ?? "",
     ).trim();
 
     const descripcion = String(
-      formulario.get("descripcion") ?? "",
+      datosFormulario.get("descripcion") ?? "",
     ).trim();
 
     const categoriaId = Number(
-      formulario.get("categoria"),
+      datosFormulario.get("categoria"),
     );
 
     const condicion = String(
-      formulario.get("condicion") ?? "",
+      datosFormulario.get("condicion") ?? "",
     ) as "nuevo" | "usado" | "reparado";
 
     const precio = Number(
-      formulario.get("precio"),
+      datosFormulario.get("precio"),
     );
 
     const ubicacion = String(
-      formulario.get("ubicacion") ?? "",
+      datosFormulario.get("ubicacion") ?? "",
     ).trim();
 
     setError("");
@@ -126,12 +126,26 @@ function Publish() {
       !Number.isInteger(categoriaId) ||
       categoriaId < 1
     ) {
-      setError("Debes seleccionar una categoría.");
+      setError(
+        "Debes seleccionar una categoría.",
+      );
 
       window.scrollTo({
         top: 0,
         behavior: "smooth",
       });
+
+      return;
+    }
+
+    if (
+      condicion !== "nuevo" &&
+      condicion !== "usado" &&
+      condicion !== "reparado"
+    ) {
+      setError(
+        "Debes seleccionar una condición válida.",
+      );
 
       return;
     }
@@ -149,8 +163,13 @@ function Publish() {
       return;
     }
 
-    if (!Number.isFinite(precio) || precio <= 0) {
-      setError("El precio debe ser mayor que cero.");
+    if (
+      !Number.isFinite(precio) ||
+      precio <= 0
+    ) {
+      setError(
+        "El precio debe ser mayor que cero.",
+      );
 
       window.scrollTo({
         top: 0,
@@ -161,7 +180,9 @@ function Publish() {
     }
 
     if (!ubicacion) {
-      setError("La ubicación es obligatoria.");
+      setError(
+        "La ubicación es obligatoria.",
+      );
 
       window.scrollTo({
         top: 0,
@@ -174,28 +195,35 @@ function Publish() {
     try {
       setGuardando(true);
 
-      const articulo = await crearArticulo({
-        titulo,
-        descripcion,
-        precio,
-        condicion,
-        ubicacion,
-        categoriaId,
-        vendedorId: 1,
-      });
+      const articuloCreado =
+        await crearArticulo({
+          titulo,
+          descripcion,
+          precio,
+          condicion,
+          ubicacion,
+          categoriaId,
+        });
 
-      let articuloFinal = articulo;
+      let articuloFinal = articuloCreado;
 
       if (imagenes.length > 0) {
-        articuloFinal = await subirImagenesArticulo(
-          articulo.articulo_id,
-          imagenes.map((imagen) => imagen.archivo),
-        );
+        articuloFinal =
+          await subirImagenesArticulo(
+            articuloCreado.articulo_id,
+            imagenes.map(
+              (imagen) => imagen.archivo,
+            ),
+          );
       }
 
       setMensaje(
         "Artículo publicado correctamente.",
       );
+
+      imagenes.forEach((imagen) => {
+        URL.revokeObjectURL(imagen.url);
+      });
 
       navigate(
         `/producto/${articuloFinal.articulo_id}`,
@@ -225,19 +253,25 @@ function Publish() {
         <h1>Publicar artículo</h1>
 
         <p>
-          Completa los detalles para publicar tu producto en
-          Re-Usa Web.
+          Completa los detalles para publicar tu
+          producto en Re-Usa Web.
         </p>
       </header>
 
       {error && (
-        <div className="error-message" role="alert">
+        <div
+          className="error-message"
+          role="alert"
+        >
           {error}
         </div>
       )}
 
       {mensaje && (
-        <div className="publish-success" role="status">
+        <div
+          className="publish-success"
+          role="status"
+        >
           {mensaje}
         </div>
       )}
@@ -256,8 +290,8 @@ function Publish() {
                 <h2>Imágenes del producto</h2>
 
                 <p>
-                  Sube hasta cinco imágenes. La primera será la
-                  portada.
+                  Sube hasta cinco imágenes. La
+                  primera será la portada.
                 </p>
               </div>
             </div>
@@ -284,33 +318,35 @@ function Publish() {
 
             {imagenes.length > 0 && (
               <div className="image-preview-grid">
-                {imagenes.map((imagen, indice) => (
-                  <div
-                    className="image-preview"
-                    key={`${imagen.archivo.name}-${indice}`}
-                  >
-                    <img
-                      src={imagen.url}
-                      alt={`Vista previa ${indice + 1}`}
-                    />
-
-                    {indice === 0 && (
-                      <span className="image-preview__cover">
-                        Portada
-                      </span>
-                    )}
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        eliminarImagen(indice)
-                      }
-                      aria-label="Eliminar imagen"
+                {imagenes.map(
+                  (imagen, indice) => (
+                    <div
+                      className="image-preview"
+                      key={`${imagen.archivo.name}-${indice}`}
                     >
-                      ×
-                    </button>
-                  </div>
-                ))}
+                      <img
+                        src={imagen.url}
+                        alt={`Vista previa ${indice + 1}`}
+                      />
+
+                      {indice === 0 && (
+                        <span className="image-preview__cover">
+                          Portada
+                        </span>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          eliminarImagen(indice)
+                        }
+                        aria-label="Eliminar imagen"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ),
+                )}
               </div>
             )}
           </section>
@@ -455,12 +491,6 @@ function Publish() {
               : "Publicar artículo"}
           </button>
 
-          <button
-            className="publish-preview-button"
-            type="button"
-          >
-            Vista previa
-          </button>
         </aside>
       </form>
     </section>

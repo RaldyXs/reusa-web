@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import {
   BrowserRouter,
   Navigate,
@@ -7,10 +8,14 @@ import {
 
 import "./App.css";
 
+import ProtectedRoute from "./components/auth/ProtectedRoute";
+import { AuthProvider } from "./contexts/AuthContext";
 import MainLayout from "./layouts/MainLayout";
+import AdminDashboard from "./pages/AdminDashboard";
 import Categories from "./pages/Categories";
 import EditPublication from "./pages/EditPublication";
 import Home from "./pages/Home";
+import Login from "./pages/Login";
 import MyProducts from "./pages/MyProducts";
 import ProductDetail from "./pages/ProductDetail";
 import Publish from "./pages/Publish";
@@ -20,69 +25,170 @@ import Saved from "./pages/Saved";
 import SearchResults from "./pages/SearchResults";
 import Settings from "./pages/Settings";
 
+interface ConLayoutProps {
+  children: ReactNode;
+}
+
+function ConLayout({
+  children,
+}: ConLayoutProps) {
+  return <MainLayout>{children}</MainLayout>;
+}
+
 function App() {
   return (
     <BrowserRouter>
-      <MainLayout>
+      <AuthProvider>
         <Routes>
-          <Route path="/" element={<Home />} />
+          <Route
+            path="/login"
+            element={<Login />}
+          />
+
+          <Route
+            path="/"
+            element={
+              <ConLayout>
+                <Home />
+              </ConLayout>
+            }
+          />
 
           <Route
             path="/marketplace"
-            element={<SearchResults />}
+            element={
+              <ConLayout>
+                <SearchResults />
+              </ConLayout>
+            }
           />
 
           <Route
             path="/categorias"
-            element={<Categories />}
+            element={
+              <ConLayout>
+                <Categories />
+              </ConLayout>
+            }
           />
 
           <Route
             path="/producto/:id"
-            element={<ProductDetail />}
+            element={
+              <ConLayout>
+                <ProductDetail />
+              </ConLayout>
+            }
           />
 
           <Route
             path="/guardados"
-            element={<Saved />}
+            element={
+              <ProtectedRoute>
+                <ConLayout>
+                  <Saved />
+                </ConLayout>
+              </ProtectedRoute>
+            }
           />
 
           <Route
             path="/mis-publicaciones"
-            element={<MyProducts />}
+            element={
+              <ProtectedRoute>
+                <ConLayout>
+                  <MyProducts />
+                </ConLayout>
+              </ProtectedRoute>
+            }
           />
 
           <Route
             path="/historial-compras"
-            element={<PurchaseHistory />}
+            element={
+              <ProtectedRoute>
+                <ConLayout>
+                  <PurchaseHistory />
+                </ConLayout>
+              </ProtectedRoute>
+            }
           />
 
           <Route
             path="/historial-ventas"
-            element={<SalesHistory />}
+            element={
+              <ProtectedRoute>
+                <ConLayout>
+                  <SalesHistory />
+                </ConLayout>
+              </ProtectedRoute>
+            }
           />
 
           <Route
             path="/configuracion"
-            element={<Settings />}
+            element={
+              <ProtectedRoute>
+                <ConLayout>
+                  <Settings />
+                </ConLayout>
+              </ProtectedRoute>
+            }
           />
 
           <Route
             path="/publicar"
-            element={<Publish />}
+            element={
+              <ProtectedRoute
+                rolesPermitidos={[
+                  "vendedor",
+                  "administrador",
+                ]}
+              >
+                <ConLayout>
+                  <Publish />
+                </ConLayout>
+              </ProtectedRoute>
+            }
           />
 
           <Route
             path="/editar-publicacion/:id"
-            element={<EditPublication />}
+            element={
+              <ProtectedRoute
+                rolesPermitidos={[
+                  "vendedor",
+                  "administrador",
+                ]}
+              >
+                <ConLayout>
+                  <EditPublication />
+                </ConLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute
+                rolesPermitidos={[
+                  "administrador",
+                ]}
+              >
+                <AdminDashboard />
+              </ProtectedRoute>
+            }
           />
 
           <Route
             path="*"
-            element={<Navigate to="/" replace />}
+            element={
+              <Navigate to="/" replace />
+            }
           />
         </Routes>
-      </MainLayout>
+      </AuthProvider>
     </BrowserRouter>
   );
 }

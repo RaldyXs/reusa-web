@@ -1,8 +1,13 @@
 import {
   Bell,
   Heart,
+  LayoutDashboard,
+  LogIn,
+  LogOut,
   MessageSquare,
   Search,
+  Settings,
+  UserRound,
 } from "lucide-react";
 import {
   useState,
@@ -10,10 +15,22 @@ import {
 } from "react";
 import { useNavigate } from "react-router-dom";
 
+import { useAuth } from "../hooks/useAuth";
+
 function Topbar() {
   const navigate = useNavigate();
+
+  const {
+    autenticado,
+    usuario,
+    logout,
+  } = useAuth();
+
   const [terminoBusqueda, setTerminoBusqueda] =
     useState("");
+
+  const [menuUsuarioAbierto, setMenuUsuarioAbierto] =
+    useState(false);
 
   function manejarBusqueda(
     event: FormEvent<HTMLFormElement>,
@@ -33,6 +50,19 @@ function Topbar() {
       )}`,
     );
   }
+
+  function cerrarSesion() {
+    logout();
+    setMenuUsuarioAbierto(false);
+
+    navigate("/", {
+      replace: true,
+    });
+  }
+
+  const inicialUsuario =
+    usuario?.nombre.trim().charAt(0).toUpperCase() ??
+    "U";
 
   return (
     <header className="topbar topbar--simple">
@@ -86,15 +116,98 @@ function Topbar() {
           <Bell size={19} />
         </button>
 
-        <button
-          className="topbar__avatar"
-          type="button"
-          aria-label="Abrir configuración"
-          title="Configuración"
-          onClick={() => navigate("/configuracion")}
-        >
-          U
-        </button>
+        {!autenticado || !usuario ? (
+          <button
+            className="topbar__login-button"
+            type="button"
+            onClick={() => navigate("/login")}
+          >
+            <LogIn size={17} />
+            Iniciar sesión
+          </button>
+        ) : (
+          <div className="topbar__user">
+            <button
+              className="topbar__user-button"
+              type="button"
+              aria-expanded={menuUsuarioAbierto}
+              aria-haspopup="menu"
+              onClick={() =>
+                setMenuUsuarioAbierto(
+                  (estadoActual) => !estadoActual,
+                )
+              }
+            >
+              <span className="topbar__avatar">
+                {inicialUsuario}
+              </span>
+
+              <span className="topbar__user-info">
+                <strong>
+                  {usuario.nombre} {usuario.apellido}
+                </strong>
+
+                <small>{usuario.rol}</small>
+              </span>
+            </button>
+
+            {menuUsuarioAbierto && (
+              <div
+                className="topbar__user-menu"
+                role="menu"
+              >
+                <div className="topbar__user-menu-header">
+                  <UserRound size={18} />
+
+                  <div>
+                    <strong>
+                      {usuario.nombre} {usuario.apellido}
+                    </strong>
+
+                    <span>{usuario.email}</span>
+                  </div>
+                </div>
+
+                {usuario.rol ===
+                  "administrador" && (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setMenuUsuarioAbierto(false);
+                      navigate("/admin");
+                    }}
+                  >
+                    <LayoutDashboard size={17} />
+                    Panel administrativo
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setMenuUsuarioAbierto(false);
+                    navigate("/configuracion");
+                  }}
+                >
+                  <Settings size={17} />
+                  Configuración
+                </button>
+
+                <button
+                  className="topbar__logout-button"
+                  type="button"
+                  role="menuitem"
+                  onClick={cerrarSesion}
+                >
+                  <LogOut size={17} />
+                  Cerrar sesión
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </nav>
     </header>
   );

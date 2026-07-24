@@ -3,7 +3,10 @@ import path from "node:path";
 
 import type { Request, Response } from "express";
 
+import type { RequestAutenticado } from "../middlewares/auth.middleware.js";
+
 import {
+  actualizarArchivadoArticulo,
   actualizarArticulo,
   actualizarEstadoArticulo,
   buscarArticulos,
@@ -40,6 +43,24 @@ function convertirArticuloId(
   return articuloId;
 }
 
+function usuarioPuedeGestionarArticulo(
+  request: RequestAutenticado,
+  vendedorId: number,
+): boolean {
+  if (!request.usuario) {
+    return false;
+  }
+
+  if (request.usuario.rol === "administrador") {
+    return true;
+  }
+
+  return (
+    Number(request.usuario.usuarioId) ===
+    Number(vendedorId)
+  );
+}
+
 async function eliminarArchivos(
   archivos: Express.Multer.File[],
 ): Promise<void> {
@@ -55,7 +76,10 @@ async function eliminarArchivoDesdeUrl(
 ): Promise<void> {
   try {
     const url = new URL(urlImagen);
-    const nombreArchivo = path.basename(url.pathname);
+
+    const nombreArchivo = path.basename(
+      url.pathname,
+    );
 
     const rutaArchivo = path.resolve(
       process.cwd(),
@@ -134,7 +158,8 @@ export async function obtenerArticulo(
       return;
     }
 
-    const articulo = await obtenerArticuloPorId(id);
+    const articulo =
+      await obtenerArticuloPorId(id);
 
     if (!articulo) {
       response.status(404).json({
@@ -159,13 +184,24 @@ export async function obtenerArticulo(
 }
 
 export async function publicarArticulo(
-  request: Request,
+  request: RequestAutenticado,
   response: Response,
 ): Promise<void> {
   try {
-    const articulo = await crearArticulo(
-      request.body,
-    );
+    if (!request.usuario) {
+      response.status(401).json({
+        ok: false,
+        message:
+          "Debes iniciar sesión para publicar",
+      });
+
+      return;
+    }
+
+    const articulo = await crearArticulo({
+      ...request.body,
+      vendedorId: request.usuario.usuarioId,
+    });
 
     response.status(201).json({
       ok: true,
@@ -182,34 +218,68 @@ export async function publicarArticulo(
 }
 
 export async function editarArticulo(
-  request: Request,
+  request: RequestAutenticado,
   response: Response,
 ): Promise<void> {
   try {
-    const id =
-      typeof request.params.id === "string"
-        ? request.params.id
-        : undefined;
-
-    if (!id) {
-      response.status(400).json({
+    if (!request.usuario) {
+      response.status(401).json({
         ok: false,
-        message: "ID de artículo inválido",
+        message:
+          "Debes iniciar sesión para editar",
       });
 
       return;
     }
 
-    const articulo = await actualizarArticulo(
-      id,
-      request.body,
-    );
+    const id =
+      typeof request.params.id === "string"
+        ? request.params.id
+        : undefined;
+
+    const articuloId =
+      convertirArticuloId(id);
+
+    const articuloExistente =
+      await obtenerArticuloPorId(
+        String(articuloId),
+      );
+
+    if (!articuloExistente) {
+      response.status(404).json({
+        ok: false,
+        message: "El artículo no existe",
+      });
+
+      return;
+    }
+
+    if (
+      !usuarioPuedeGestionarArticulo(
+        request,
+        articuloExistente.vendedor_id,
+      )
+    ) {
+      response.status(403).json({
+        ok: false,
+        message:
+          "No tienes permiso para editar esta publicación",
+      });
+
+      return;
+    }
+
+    const articuloActualizado =
+      await actualizarArticulo(
+        String(articuloId),
+        request.body,
+      );
 
     response.status(200).json({
       ok: true,
       message:
         "Artículo actualizado correctamente",
-      articulo,
+      articulo: articuloActualizado,
     });
   } catch (error) {
     const mensaje = obtenerMensajeError(error);
@@ -227,27 +297,60 @@ export async function editarArticulo(
 }
 
 export async function cambiarEstadoArticulo(
-  request: Request,
+  request: RequestAutenticado,
   response: Response,
 ): Promise<void> {
   try {
-    const id =
-      typeof request.params.id === "string"
-        ? request.params.id
-        : undefined;
-
-    if (!id) {
-      response.status(400).json({
+    if (!request.usuario) {
+      response.status(401).json({
         ok: false,
-        message: "ID de artículo inválido",
+        message:
+          "Debes iniciar sesión para cambiar el estado",
       });
 
       return;
     }
 
-    const articulo =
+    const id =
+      typeof request.params.id === "string"
+        ? request.params.id
+        : undefined;
+
+    const articuloId =
+      convertirArticuloId(id);
+
+    const articuloExistente =
+      await obtenerArticuloPorId(
+        String(articuloId),
+      );
+
+    if (!articuloExistente) {
+      response.status(404).json({
+        ok: false,
+        message: "El artículo no existe",
+      });
+
+      return;
+    }
+
+    if (
+      !usuarioPuedeGestionarArticulo(
+        request,
+        articuloExistente.vendedor_id,
+      )
+    ) {
+      response.status(403).json({
+        ok: false,
+        message:
+          "No tienes permiso para cambiar el estado de esta publicación",
+      });
+
+      return;
+    }
+
+    const articuloActualizado =
       await actualizarEstadoArticulo(
-        id,
+        String(articuloId),
         request.body,
       );
 
@@ -255,7 +358,90 @@ export async function cambiarEstadoArticulo(
       ok: true,
       message:
         "Estado actualizado correctamente",
-      articulo,
+      articulo: articuloActualizado,
+    });
+  } catch (error) {
+    const mensaje = obtenerMensajeError(error);
+
+    const estadoHttp =
+      mensaje === "El artículo no existe"
+        ? 404
+        : 400;
+
+    response.status(estadoHttp).json({
+      ok: false,
+      message: mensaje,
+    });
+  }
+}
+
+export async function cambiarArchivadoArticulo(
+  request: RequestAutenticado,
+  response: Response,
+): Promise<void> {
+  try {
+    if (!request.usuario) {
+      response.status(401).json({
+        ok: false,
+        message:
+          "Debes iniciar sesión para archivar publicaciones",
+      });
+
+      return;
+    }
+
+    const id =
+      typeof request.params.id === "string"
+        ? request.params.id
+        : undefined;
+
+    const articuloId =
+      convertirArticuloId(id);
+
+    const articuloExistente =
+      await obtenerArticuloPorId(
+        String(articuloId),
+      );
+
+    if (!articuloExistente) {
+      response.status(404).json({
+        ok: false,
+        message: "El artículo no existe",
+      });
+
+      return;
+    }
+
+    if (
+      !usuarioPuedeGestionarArticulo(
+        request,
+        articuloExistente.vendedor_id,
+      )
+    ) {
+      response.status(403).json({
+        ok: false,
+        message:
+          "No tienes permiso para archivar esta publicación",
+      });
+
+      return;
+    }
+
+    const articuloActualizado =
+      await actualizarArchivadoArticulo(
+        String(articuloId),
+        request.body,
+      );
+
+    const estaArchivado =
+      Number(articuloActualizado.archivado) === 1;
+
+    response.status(200).json({
+      ok: true,
+      message: estaArchivado
+        ? "Publicación archivada correctamente"
+        : "Publicación desarchivada correctamente",
+      articulo: articuloActualizado,
     });
   } catch (error) {
     const mensaje = obtenerMensajeError(error);
@@ -273,7 +459,7 @@ export async function cambiarEstadoArticulo(
 }
 
 export async function guardarImagenesArticulo(
-  request: Request,
+  request: RequestAutenticado,
   response: Response,
 ): Promise<void> {
   const archivos =
@@ -281,24 +467,54 @@ export async function guardarImagenesArticulo(
     [];
 
   try {
+    if (!request.usuario) {
+      await eliminarArchivos(archivos);
+
+      response.status(401).json({
+        ok: false,
+        message:
+          "Debes iniciar sesión para subir imágenes",
+      });
+
+      return;
+    }
+
     const id =
       typeof request.params.id === "string"
         ? request.params.id
         : undefined;
 
-    const articuloId = convertirArticuloId(id);
+    const articuloId =
+      convertirArticuloId(id);
 
-    const articulo =
+    const articuloExistente =
       await obtenerArticuloPorId(
         String(articuloId),
       );
 
-    if (!articulo) {
+    if (!articuloExistente) {
       await eliminarArchivos(archivos);
 
       response.status(404).json({
         ok: false,
         message: "El artículo no existe",
+      });
+
+      return;
+    }
+
+    if (
+      !usuarioPuedeGestionarArticulo(
+        request,
+        articuloExistente.vendedor_id,
+      )
+    ) {
+      await eliminarArchivos(archivos);
+
+      response.status(403).json({
+        ok: false,
+        message:
+          "No tienes permiso para agregar imágenes a esta publicación",
       });
 
       return;
@@ -315,7 +531,9 @@ export async function guardarImagenesArticulo(
     }
 
     const cantidadActual =
-      await contarImagenesArticulo(articuloId);
+      await contarImagenesArticulo(
+        articuloId,
+      );
 
     if (
       cantidadActual + archivos.length >
@@ -339,8 +557,11 @@ export async function guardarImagenesArticulo(
       (archivo, indice) => ({
         urlImagen:
           `${baseUrl}/uploads/articulos/${archivo.filename}`,
+
         esPrincipal:
-          cantidadActual === 0 && indice === 0,
+          cantidadActual === 0 &&
+          indice === 0,
+
         orden: cantidadActual + indice,
       }),
     );
@@ -359,9 +580,11 @@ export async function guardarImagenesArticulo(
       ok: true,
       message:
         "Imágenes guardadas correctamente",
+
       imagenes: imagenes.map(
         (imagen) => imagen.urlImagen,
       ),
+
       articulo: articuloActualizado,
     });
   } catch (error) {
@@ -375,16 +598,27 @@ export async function guardarImagenesArticulo(
 }
 
 export async function eliminarImagenArticulo(
-  request: Request,
+  request: RequestAutenticado,
   response: Response,
 ): Promise<void> {
   try {
+    if (!request.usuario) {
+      response.status(401).json({
+        ok: false,
+        message:
+          "Debes iniciar sesión para eliminar imágenes",
+      });
+
+      return;
+    }
+
     const id =
       typeof request.params.id === "string"
         ? request.params.id
         : undefined;
 
-    const articuloId = convertirArticuloId(id);
+    const articuloId =
+      convertirArticuloId(id);
 
     const urlImagen =
       typeof request.body.urlImagen === "string"
@@ -401,15 +635,30 @@ export async function eliminarImagenArticulo(
       return;
     }
 
-    const articulo =
+    const articuloExistente =
       await obtenerArticuloPorId(
         String(articuloId),
       );
 
-    if (!articulo) {
+    if (!articuloExistente) {
       response.status(404).json({
         ok: false,
         message: "El artículo no existe",
+      });
+
+      return;
+    }
+
+    if (
+      !usuarioPuedeGestionarArticulo(
+        request,
+        articuloExistente.vendedor_id,
+      )
+    ) {
+      response.status(403).json({
+        ok: false,
+        message:
+          "No tienes permiso para eliminar imágenes de esta publicación",
       });
 
       return;

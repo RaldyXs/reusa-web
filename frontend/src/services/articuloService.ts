@@ -1,6 +1,8 @@
 import type { Articulo } from "../interfaces/articulo";
+import type { Sesion } from "../interfaces/auth";
 
 const API_URL = "http://localhost:3000/api/articulos";
+const CLAVE_SESION = "reusa_sesion";
 
 interface ArticulosResponse {
   ok: boolean;
@@ -29,7 +31,6 @@ export interface CrearArticuloDatos {
   condicion: "nuevo" | "usado" | "reparado";
   ubicacion: string;
   categoriaId: number;
-  vendedorId: number;
 }
 
 export interface ActualizarArticuloDatos {
@@ -43,8 +44,42 @@ export interface ActualizarArticuloDatos {
 
 export type EstadoArticulo =
   | "activo"
-  | "vendido"
-  | "archivado";
+  | "vendido";
+
+function obtenerToken(): string {
+  const sesionGuardada =
+    localStorage.getItem(CLAVE_SESION);
+
+  if (!sesionGuardada) {
+    throw new Error(
+      "Debes iniciar sesión para realizar esta acción",
+    );
+  }
+
+  try {
+    const sesion =
+      JSON.parse(sesionGuardada) as Sesion;
+
+    if (!sesion.token) {
+      throw new Error();
+    }
+
+    return sesion.token;
+  } catch {
+    localStorage.removeItem(CLAVE_SESION);
+
+    throw new Error(
+      "La sesión guardada no es válida. Inicia sesión nuevamente",
+    );
+  }
+}
+
+function obtenerHeadersAutenticados(): HeadersInit {
+  return {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${obtenerToken()}`,
+  };
+}
 
 async function leerRespuestaArticulo(
   response: Response,
@@ -124,9 +159,7 @@ export async function crearArticulo(
 ): Promise<Articulo> {
   const response = await fetch(API_URL, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: obtenerHeadersAutenticados(),
     body: JSON.stringify(datos),
   });
 
@@ -144,9 +177,7 @@ export async function actualizarArticulo(
     `${API_URL}/${articuloId}`,
     {
       method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: obtenerHeadersAutenticados(),
       body: JSON.stringify(datos),
     },
   );
@@ -165,9 +196,7 @@ export async function actualizarEstadoArticulo(
     `${API_URL}/${articuloId}/estado`,
     {
       method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: obtenerHeadersAutenticados(),
       body: JSON.stringify({ estado }),
     },
   );
@@ -175,6 +204,27 @@ export async function actualizarEstadoArticulo(
   return leerRespuestaArticulo(
     response,
     "No se pudo actualizar el estado del artículo",
+  );
+}
+
+export async function actualizarArchivadoArticulo(
+  articuloId: number,
+  archivado: boolean,
+): Promise<Articulo> {
+  const response = await fetch(
+    `${API_URL}/${articuloId}/archivado`,
+    {
+      method: "PATCH",
+      headers: obtenerHeadersAutenticados(),
+      body: JSON.stringify({ archivado }),
+    },
+  );
+
+  return leerRespuestaArticulo(
+    response,
+    archivado
+      ? "No se pudo archivar la publicación"
+      : "No se pudo desarchivar la publicación",
   );
 }
 
@@ -202,6 +252,9 @@ export async function subirImagenesArticulo(
     `${API_URL}/${articuloId}/imagenes`,
     {
       method: "POST",
+      headers: {
+        Authorization: `Bearer ${obtenerToken()}`,
+      },
       body: formulario,
     },
   );
@@ -231,9 +284,7 @@ export async function eliminarImagenArticulo(
     `${API_URL}/${articuloId}/imagenes`,
     {
       method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: obtenerHeadersAutenticados(),
       body: JSON.stringify({ urlImagen }),
     },
   );

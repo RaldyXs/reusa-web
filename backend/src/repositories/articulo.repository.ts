@@ -4,6 +4,7 @@ import type {
 } from "mysql2";
 
 import { pool } from "../config/database.js";
+
 import type {
   Articulo,
   CrearArticuloDatos,
@@ -26,6 +27,12 @@ interface CantidadImagenesRow extends RowDataPacket {
   cantidad: number;
 }
 
+interface ImagenGuardadaRow extends RowDataPacket {
+  imagen_id: number;
+  es_principal: number;
+  orden: number;
+}
+
 export interface ActualizarArticuloDatos {
   titulo: string;
   descripcion: string;
@@ -37,8 +44,7 @@ export interface ActualizarArticuloDatos {
 
 export type EstadoArticulo =
   | "activo"
-  | "vendido"
-  | "archivado";
+  | "vendido";
 
 export interface NuevaImagenArticulo {
   urlImagen: string;
@@ -56,7 +62,10 @@ export async function buscarArticulosEnBaseDeDatos(
       [termino, categoriaId],
     );
 
-  return resultado[0];
+  return resultado[0].map((articulo) => ({
+    ...articulo,
+    archivado: Number(articulo.archivado ?? 0),
+  }));
 }
 
 export async function obtenerArticuloPorIdEnBaseDeDatos(
@@ -74,9 +83,14 @@ export async function obtenerArticuloPorIdEnBaseDeDatos(
         a.condicion,
         a.ubicacion,
         a.estado,
+        a.archivado,
         a.fecha_publicacion,
         c.nombre AS categoria,
-        CONCAT(u.nombre, ' ', u.apellido) AS vendedor,
+        CONCAT(
+          u.nombre,
+          ' ',
+          u.apellido
+        ) AS vendedor,
         (
           SELECT ia.url_imagen
           FROM imagenes_articulos ia
@@ -120,6 +134,7 @@ export async function obtenerArticuloPorIdEnBaseDeDatos(
 
   return {
     ...articulo,
+    archivado: Number(articulo.archivado),
     imagenes: filasImagenes.map(
       (imagen) => imagen.url_imagen,
     ),
@@ -129,30 +144,42 @@ export async function obtenerArticuloPorIdEnBaseDeDatos(
 export async function crearArticuloEnBaseDeDatos(
   datos: CrearArticuloDatos,
 ): Promise<number> {
-  const [resultado] = await pool.execute<ResultSetHeader>(
-    `
-      INSERT INTO articulos (
-        vendedor_id,
-        categoria_id,
-        titulo,
-        descripcion,
-        precio,
-        condicion,
-        ubicacion,
-        estado
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, 'activo')
-    `,
-    [
-      datos.vendedorId,
-      datos.categoriaId,
-      datos.titulo,
-      datos.descripcion,
-      datos.precio,
-      datos.condicion,
-      datos.ubicacion,
-    ],
-  );
+  const [resultado] =
+    await pool.execute<ResultSetHeader>(
+      `
+        INSERT INTO articulos (
+          vendedor_id,
+          categoria_id,
+          titulo,
+          descripcion,
+          precio,
+          condicion,
+          ubicacion,
+          estado,
+          archivado
+        )
+        VALUES (
+          ?,
+          ?,
+          ?,
+          ?,
+          ?,
+          ?,
+          ?,
+          'activo',
+          0
+        )
+      `,
+      [
+        datos.vendedorId,
+        datos.categoriaId,
+        datos.titulo,
+        datos.descripcion,
+        datos.precio,
+        datos.condicion,
+        datos.ubicacion,
+      ],
+    );
 
   return resultado.insertId;
 }
@@ -161,28 +188,29 @@ export async function actualizarArticuloEnBaseDeDatos(
   articuloId: number,
   datos: ActualizarArticuloDatos,
 ): Promise<boolean> {
-  const [resultado] = await pool.execute<ResultSetHeader>(
-    `
-      UPDATE articulos
-      SET
-        categoria_id = ?,
-        titulo = ?,
-        descripcion = ?,
-        precio = ?,
-        condicion = ?,
-        ubicacion = ?
-      WHERE articulo_id = ?
-    `,
-    [
-      datos.categoriaId,
-      datos.titulo,
-      datos.descripcion,
-      datos.precio,
-      datos.condicion,
-      datos.ubicacion,
-      articuloId,
-    ],
-  );
+  const [resultado] =
+    await pool.execute<ResultSetHeader>(
+      `
+        UPDATE articulos
+        SET
+          categoria_id = ?,
+          titulo = ?,
+          descripcion = ?,
+          precio = ?,
+          condicion = ?,
+          ubicacion = ?
+        WHERE articulo_id = ?
+      `,
+      [
+        datos.categoriaId,
+        datos.titulo,
+        datos.descripcion,
+        datos.precio,
+        datos.condicion,
+        datos.ubicacion,
+        articuloId,
+      ],
+    );
 
   return resultado.affectedRows > 0;
 }
@@ -191,14 +219,35 @@ export async function actualizarEstadoArticuloEnBaseDeDatos(
   articuloId: number,
   estado: EstadoArticulo,
 ): Promise<boolean> {
-  const [resultado] = await pool.execute<ResultSetHeader>(
-    `
-      UPDATE articulos
-      SET estado = ?
-      WHERE articulo_id = ?
-    `,
-    [estado, articuloId],
-  );
+  const [resultado] =
+    await pool.execute<ResultSetHeader>(
+      `
+        UPDATE articulos
+        SET estado = ?
+        WHERE articulo_id = ?
+      `,
+      [estado, articuloId],
+    );
+
+  return resultado.affectedRows > 0;
+}
+
+export async function actualizarArchivadoArticuloEnBaseDeDatos(
+  articuloId: number,
+  archivado: boolean,
+): Promise<boolean> {
+  const [resultado] =
+    await pool.execute<ResultSetHeader>(
+      `
+        UPDATE articulos
+        SET archivado = ?
+        WHERE articulo_id = ?
+      `,
+      [
+        archivado ? 1 : 0,
+        articuloId,
+      ],
+    );
 
   return resultado.affectedRows > 0;
 }
@@ -206,15 +255,16 @@ export async function actualizarEstadoArticuloEnBaseDeDatos(
 export async function existeArticuloPorId(
   articuloId: number,
 ): Promise<boolean> {
-  const [filas] = await pool.execute<ArticuloIdRow[]>(
-    `
-      SELECT articulo_id
-      FROM articulos
-      WHERE articulo_id = ?
-      LIMIT 1
-    `,
-    [articuloId],
-  );
+  const [filas] =
+    await pool.execute<ArticuloIdRow[]>(
+      `
+        SELECT articulo_id
+        FROM articulos
+        WHERE articulo_id = ?
+        LIMIT 1
+      `,
+      [articuloId],
+    );
 
   return filas.length > 0;
 }
@@ -277,11 +327,6 @@ export async function guardarImagenesArticuloEnBaseDeDatos(
   }
 }
 
-interface ImagenGuardadaRow extends RowDataPacket {
-  imagen_id: number;
-  es_principal: number;
-}
-
 export async function eliminarImagenArticuloEnBaseDeDatos(
   articuloId: number,
   urlImagen: string,
@@ -296,7 +341,8 @@ export async function eliminarImagenArticuloEnBaseDeDatos(
         `
           SELECT
             imagen_id,
-            es_principal
+            es_principal,
+            orden
           FROM imagenes_articulos
           WHERE articulo_id = ?
             AND url_imagen = ?
@@ -326,7 +372,8 @@ export async function eliminarImagenArticuloEnBaseDeDatos(
           `
             SELECT
               imagen_id,
-              es_principal
+              es_principal,
+              orden
             FROM imagenes_articulos
             WHERE articulo_id = ?
             ORDER BY
@@ -356,19 +403,16 @@ export async function eliminarImagenArticuloEnBaseDeDatos(
         UPDATE imagenes_articulos
         SET orden = orden - 1
         WHERE articulo_id = ?
-          AND orden > (
-            SELECT orden_eliminado
-            FROM (
-              SELECT COALESCE(MAX(orden), 0) AS orden_eliminado
-              FROM imagenes_articulos
-              WHERE articulo_id = ?
-            ) AS resultado
-          )
+          AND orden > ?
       `,
-      [articuloId, articuloId],
+      [
+        articuloId,
+        imagen.orden,
+      ],
     );
 
     await conexion.commit();
+
     return true;
   } catch (error) {
     await conexion.rollback();

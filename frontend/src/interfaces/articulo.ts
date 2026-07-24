@@ -16,6 +16,8 @@ export interface Articulo {
   vendedor_id?: number;
   usuario_id?: number;
 
-  estado?: "activo" | "vendido" | "archivado";
+  estado?: "activo" | "vendido";
+  archivado?: number;
+
   fecha_publicacion?: string | null;
 }

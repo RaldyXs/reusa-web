@@ -4,6 +4,7 @@ import cors from "cors";
 import express from "express";
 
 import articuloRouter from "./routes/articulo.routes.js";
+import authRouter from "./routes/auth.routes.js";
 
 const app = express();
 
@@ -18,7 +19,12 @@ console.log(
   carpetaUploads,
 );
 
-app.use(cors());
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+  }),
+);
+
 app.use(express.json());
 
 app.use(
@@ -34,6 +40,7 @@ app.get("/api/health", (_request, response) => {
   });
 });
 
+app.use("/api/auth", authRouter);
 app.use("/api/articulos", articuloRouter);
 
 export default app;

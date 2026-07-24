@@ -1,27 +1,46 @@
 import {
   Archive,
+  CheckCircle2,
   Eye,
   Package,
   Pencil,
   Plus,
+  RotateCcw,
   Tag,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+import { useAuth } from "../hooks/useAuth";
 import type { Articulo } from "../interfaces/articulo";
 import {
+  actualizarArchivadoArticulo,
   actualizarEstadoArticulo,
   obtenerArticulos,
   type EstadoArticulo,
 } from "../services/articuloService";
 
+type FiltroPublicaciones =
+  | "todas"
+  | "activas"
+  | "vendidas"
+  | "archivadas";
+
 function MyProducts() {
   const navigate = useNavigate();
+  const { usuario } = useAuth();
 
-  const [articulos, setArticulos] = useState<Articulo[]>([]);
-  const [cargando, setCargando] = useState(true);
+  const [articulos, setArticulos] =
+    useState<Articulo[]>([]);
+
+  const [filtro, setFiltro] =
+    useState<FiltroPublicaciones>("todas");
+
+  const [cargando, setCargando] =
+    useState(true);
+
   const [error, setError] = useState("");
+
   const [articuloProcesando, setArticuloProcesando] =
     useState<number | null>(null);
 
@@ -33,14 +52,25 @@ function MyProducts() {
         setCargando(true);
         setError("");
 
+        if (!usuario) {
+          throw new Error(
+            "Debes iniciar sesión para ver tus publicaciones",
+          );
+        }
+
         const datos = await obtenerArticulos();
 
-        const publicacionesDelUsuario = datos.filter(
-          (articulo) => Number(articulo.vendedor_id) === 1,
-        );
+        const publicacionesDelUsuario =
+          datos.filter(
+            (articulo) =>
+              Number(articulo.vendedor_id) ===
+              Number(usuario.usuarioId),
+          );
 
         if (componenteActivo) {
-          setArticulos(publicacionesDelUsuario);
+          setArticulos(
+            publicacionesDelUsuario,
+          );
         }
       } catch (errorDesconocido) {
         const mensaje =
@@ -64,7 +94,7 @@ function MyProducts() {
     return () => {
       componenteActivo = false;
     };
-  }, []);
+  }, [usuario]);
 
   async function cambiarEstado(
     articuloId: number,
@@ -98,17 +128,86 @@ function MyProducts() {
     }
   }
 
+  async function cambiarArchivado(
+    articuloId: number,
+    archivado: boolean,
+  ): Promise<void> {
+    try {
+      setError("");
+      setArticuloProcesando(articuloId);
+
+      const articuloActualizado =
+        await actualizarArchivadoArticulo(
+          articuloId,
+          archivado,
+        );
+
+      setArticulos((articulosActuales) =>
+        articulosActuales.map((articulo) =>
+          articulo.articulo_id === articuloId
+            ? articuloActualizado
+            : articulo,
+        ),
+      );
+    } catch (errorDesconocido) {
+      setError(
+        errorDesconocido instanceof Error
+          ? errorDesconocido.message
+          : "No se pudo archivar la publicación",
+      );
+    } finally {
+      setArticuloProcesando(null);
+    }
+  }
+
   const activas = articulos.filter(
-    (articulo) => articulo.estado === "activo",
+    (articulo) =>
+      (articulo.estado ?? "activo") ===
+        "activo" &&
+      Number(articulo.archivado ?? 0) === 0,
   ).length;
 
   const vendidas = articulos.filter(
-    (articulo) => articulo.estado === "vendido",
+    (articulo) =>
+      articulo.estado === "vendido" &&
+      Number(articulo.archivado ?? 0) === 0,
   ).length;
 
   const archivadas = articulos.filter(
-    (articulo) => articulo.estado === "archivado",
+    (articulo) =>
+      Number(articulo.archivado ?? 0) === 1,
   ).length;
+
+  const articulosVisibles = useMemo(() => {
+    if (filtro === "activas") {
+      return articulos.filter(
+        (articulo) =>
+          (articulo.estado ?? "activo") ===
+            "activo" &&
+          Number(articulo.archivado ?? 0) === 0,
+      );
+    }
+
+    if (filtro === "vendidas") {
+      return articulos.filter(
+        (articulo) =>
+          articulo.estado === "vendido" &&
+          Number(articulo.archivado ?? 0) === 0,
+      );
+    }
+
+    if (filtro === "archivadas") {
+      return articulos.filter(
+        (articulo) =>
+          Number(articulo.archivado ?? 0) === 1,
+      );
+    }
+
+    return articulos.filter(
+      (articulo) =>
+        Number(articulo.archivado ?? 0) === 0,
+    );
+  }, [articulos, filtro]);
 
   return (
     <section className="my-products-page">
@@ -119,8 +218,8 @@ function MyProducts() {
           <h1>Mis publicaciones</h1>
 
           <p>
-            Administra tus artículos, revisa su estado y crea
-            nuevas publicaciones.
+            Administra tus artículos, revisa su
+            estado y crea nuevas publicaciones.
           </p>
         </div>
 
@@ -171,8 +270,55 @@ function MyProducts() {
         </article>
       </div>
 
+      <div className="my-products-filters">
+        <button
+          type="button"
+          className={
+            filtro === "todas" ? "active" : ""
+          }
+          onClick={() => setFiltro("todas")}
+        >
+          Todas
+        </button>
+
+        <button
+          type="button"
+          className={
+            filtro === "activas" ? "active" : ""
+          }
+          onClick={() => setFiltro("activas")}
+        >
+          Activas
+        </button>
+
+        <button
+          type="button"
+          className={
+            filtro === "vendidas" ? "active" : ""
+          }
+          onClick={() => setFiltro("vendidas")}
+        >
+          Vendidas
+        </button>
+
+        <button
+          type="button"
+          className={
+            filtro === "archivadas"
+              ? "active"
+              : ""
+          }
+          onClick={() => setFiltro("archivadas")}
+        >
+          Archivadas
+        </button>
+      </div>
+
       {error ? (
-        <div className="error-message" role="alert">
+        <div
+          className="error-message"
+          role="alert"
+        >
           {error}
         </div>
       ) : cargando ? (
@@ -183,11 +329,13 @@ function MyProducts() {
         <div className="my-products-empty">
           <Package size={38} />
 
-          <h2>Todavía no tienes publicaciones</h2>
+          <h2>
+            Todavía no tienes publicaciones
+          </h2>
 
           <p>
-            Publica tu primer artículo para que aparezca en el
-            marketplace.
+            Publica tu primer artículo para que
+            aparezca en el marketplace.
           </p>
 
           <button
@@ -197,9 +345,22 @@ function MyProducts() {
             Crear publicación
           </button>
         </div>
+      ) : articulosVisibles.length === 0 ? (
+        <div className="my-products-empty">
+          <Package size={38} />
+
+          <h2>
+            No hay publicaciones en esta sección
+          </h2>
+
+          <p>
+            Cambia de filtro para revisar otras
+            publicaciones.
+          </p>
+        </div>
       ) : (
         <div className="my-products-grid">
-          {articulos.map((articulo) => {
+          {articulosVisibles.map((articulo) => {
             const precio = Number(
               articulo.precio,
             ).toLocaleString("es-DO", {
@@ -211,11 +372,26 @@ function MyProducts() {
             const estadoActual =
               articulo.estado ?? "activo";
 
+            const estaActivo =
+              estadoActual === "activo";
+
+            const estaVendido =
+              estadoActual === "vendido";
+
             const estaArchivado =
-              estadoActual === "archivado";
+              Number(
+                articulo.archivado ?? 0,
+              ) === 1;
 
             const estaProcesando =
-              articuloProcesando === articulo.articulo_id;
+              articuloProcesando ===
+              articulo.articulo_id;
+
+            const textoEstado = estaArchivado
+              ? estadoActual === "vendido"
+                ? "Vendido · Archivado"
+                : "Activo · Archivado"
+              : estadoActual;
 
             return (
               <article
@@ -225,7 +401,9 @@ function MyProducts() {
                 <div className="my-product-card__image">
                   {articulo.imagen_principal ? (
                     <img
-                      src={articulo.imagen_principal}
+                      src={
+                        articulo.imagen_principal
+                      }
                       alt={articulo.titulo}
                     />
                   ) : (
@@ -233,14 +411,16 @@ function MyProducts() {
                   )}
 
                   <small
-                    className={`my-product-card__status my-product-card__status--${estadoActual}`}
+                    className={`my-product-card__status my-product-card__status--${estaArchivado ? "archivado" : estadoActual}`}
                   >
-                    {estadoActual}
+                    {textoEstado}
                   </small>
                 </div>
 
                 <div className="my-product-card__content">
-                  <span>{articulo.categoria}</span>
+                  <span>
+                    {articulo.categoria}
+                  </span>
 
                   <h2>{articulo.titulo}</h2>
 
@@ -261,6 +441,10 @@ function MyProducts() {
 
                     <button
                       type="button"
+                      disabled={
+                        estaProcesando ||
+                        estaArchivado
+                      }
                       onClick={() =>
                         navigate(
                           `/editar-publicacion/${articulo.articulo_id}`,
@@ -271,24 +455,64 @@ function MyProducts() {
                       Editar
                     </button>
 
+                    {!estaArchivado && estaActivo && (
+                      <button
+                        type="button"
+                        disabled={estaProcesando}
+                        onClick={() =>
+                          void cambiarEstado(
+                            articulo.articulo_id,
+                            "vendido",
+                          )
+                        }
+                      >
+                        <CheckCircle2 size={16} />
+
+                        {estaProcesando
+                          ? "Guardando..."
+                          : "Marcar vendido"}
+                      </button>
+                    )}
+
+                    {!estaArchivado && estaVendido && (
+                      <button
+                        type="button"
+                        disabled={estaProcesando}
+                        onClick={() =>
+                          void cambiarEstado(
+                            articulo.articulo_id,
+                            "activo",
+                          )
+                        }
+                      >
+                        <RotateCcw size={16} />
+
+                        {estaProcesando
+                          ? "Guardando..."
+                          : "Volver a activar"}
+                      </button>
+                    )}
+
                     <button
                       type="button"
                       disabled={estaProcesando}
                       onClick={() =>
-                        void cambiarEstado(
+                        void cambiarArchivado(
                           articulo.articulo_id,
-                          estaArchivado
-                            ? "activo"
-                            : "archivado",
+                          !estaArchivado,
                         )
                       }
                     >
-                      <Archive size={16} />
+                      {estaArchivado ? (
+                        <RotateCcw size={16} />
+                      ) : (
+                        <Archive size={16} />
+                      )}
 
                       {estaProcesando
                         ? "Guardando..."
                         : estaArchivado
-                          ? "Activar"
+                          ? "Desarchivar"
                           : "Archivar"}
                     </button>
                   </div>

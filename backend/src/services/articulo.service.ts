@@ -4,6 +4,7 @@ import type {
 } from "../models/articulo.model.js";
 
 import {
+  actualizarArchivadoArticuloEnBaseDeDatos,
   actualizarArticuloEnBaseDeDatos,
   actualizarEstadoArticuloEnBaseDeDatos,
   buscarArticulosEnBaseDeDatos,
@@ -36,7 +37,13 @@ interface ActualizarEstadoEntrada {
   estado?: unknown;
 }
 
-function convertirArticuloId(articuloId: string): number {
+interface ActualizarArchivadoEntrada {
+  archivado?: unknown;
+}
+
+function convertirArticuloId(
+  articuloId: string,
+): number {
   const idConvertido = Number(articuloId);
 
   if (
@@ -70,7 +77,10 @@ function validarDatosArticulo(
       : "";
 
   const precio = Number(entrada.precio);
-  const categoriaId = Number(entrada.categoriaId);
+  const categoriaId = Number(
+    entrada.categoriaId,
+  );
+
   const condicion = entrada.condicion;
 
   if (titulo.length < 3) {
@@ -85,7 +95,10 @@ function validarDatosArticulo(
     );
   }
 
-  if (!Number.isFinite(precio) || precio <= 0) {
+  if (
+    !Number.isFinite(precio) ||
+    precio <= 0
+  ) {
     throw new Error(
       "El precio debe ser mayor que cero",
     );
@@ -111,7 +124,9 @@ function validarDatosArticulo(
   }
 
   if (!ubicacion) {
-    throw new Error("La ubicación es obligatoria");
+    throw new Error(
+      "La ubicación es obligatoria",
+    );
   }
 
   return {
@@ -128,12 +143,15 @@ export async function buscarArticulos(
   termino: string | undefined,
   categoriaId: string | undefined,
 ): Promise<Articulo[]> {
-  const terminoLimpio = termino?.trim() ?? "";
+  const terminoLimpio =
+    termino?.trim() ?? "";
 
-  let categoriaConvertida: number | null = null;
+  let categoriaConvertida: number | null =
+    null;
 
   if (categoriaId) {
-    const numeroCategoria = Number(categoriaId);
+    const numeroCategoria =
+      Number(categoriaId);
 
     if (
       !Number.isInteger(numeroCategoria) ||
@@ -144,7 +162,8 @@ export async function buscarArticulos(
       );
     }
 
-    categoriaConvertida = numeroCategoria;
+    categoriaConvertida =
+      numeroCategoria;
   }
 
   return buscarArticulosEnBaseDeDatos(
@@ -156,7 +175,8 @@ export async function buscarArticulos(
 export async function obtenerArticuloPorId(
   articuloId: string,
 ): Promise<Articulo | null> {
-  const idConvertido = convertirArticuloId(articuloId);
+  const idConvertido =
+    convertirArticuloId(articuloId);
 
   return obtenerArticuloPorIdEnBaseDeDatos(
     idConvertido,
@@ -166,9 +186,11 @@ export async function obtenerArticuloPorId(
 export async function crearArticulo(
   entrada: CrearArticuloEntrada,
 ): Promise<Articulo> {
-  const datosArticulo = validarDatosArticulo(entrada);
+  const datosArticulo =
+    validarDatosArticulo(entrada);
 
-  const vendedorId = Number(entrada.vendedorId ?? 1);
+  const vendedorId =
+    Number(entrada.vendedorId);
 
   if (
     !Number.isInteger(vendedorId) ||
@@ -205,8 +227,11 @@ export async function actualizarArticulo(
   articuloId: string,
   entrada: ActualizarArticuloEntrada,
 ): Promise<Articulo> {
-  const idConvertido = convertirArticuloId(articuloId);
-  const datos = validarDatosArticulo(entrada);
+  const idConvertido =
+    convertirArticuloId(articuloId);
+
+  const datos =
+    validarDatosArticulo(entrada);
 
   const articuloActual =
     await obtenerArticuloPorIdEnBaseDeDatos(
@@ -214,7 +239,9 @@ export async function actualizarArticulo(
     );
 
   if (!articuloActual) {
-    throw new Error("El artículo no existe");
+    throw new Error(
+      "El artículo no existe",
+    );
   }
 
   const actualizado =
@@ -247,13 +274,14 @@ export async function actualizarEstadoArticulo(
   articuloId: string,
   entrada: ActualizarEstadoEntrada,
 ): Promise<Articulo> {
-  const idConvertido = convertirArticuloId(articuloId);
+  const idConvertido =
+    convertirArticuloId(articuloId);
+
   const estado = entrada.estado;
 
   if (
     estado !== "activo" &&
-    estado !== "vendido" &&
-    estado !== "archivado"
+    estado !== "vendido"
   ) {
     throw new Error(
       "El estado proporcionado no es válido",
@@ -266,13 +294,15 @@ export async function actualizarEstadoArticulo(
     );
 
   if (!articuloActual) {
-    throw new Error("El artículo no existe");
+    throw new Error(
+      "El artículo no existe",
+    );
   }
 
   const actualizado =
     await actualizarEstadoArticuloEnBaseDeDatos(
       idConvertido,
-      estado,
+      estado as EstadoArticulo,
     );
 
   if (!actualizado) {
@@ -281,8 +311,78 @@ export async function actualizarEstadoArticulo(
     );
   }
 
-  return {
-    ...articuloActual,
-    estado,
-  };
+  const articuloActualizado =
+    await obtenerArticuloPorIdEnBaseDeDatos(
+      idConvertido,
+    );
+
+  if (!articuloActualizado) {
+    throw new Error(
+      "El estado fue actualizado, pero el artículo no pudo recuperarse",
+    );
+  }
+
+  return articuloActualizado;
+}
+
+export async function actualizarArchivadoArticulo(
+  articuloId: string,
+  entrada: ActualizarArchivadoEntrada,
+): Promise<Articulo> {
+  const idConvertido =
+    convertirArticuloId(articuloId);
+
+  const valorArchivado =
+    entrada.archivado;
+
+  if (
+    valorArchivado !== true &&
+    valorArchivado !== false &&
+    valorArchivado !== 1 &&
+    valorArchivado !== 0
+  ) {
+    throw new Error(
+      "El valor de archivado no es válido",
+    );
+  }
+
+  const archivado =
+    valorArchivado === true ||
+    valorArchivado === 1;
+
+  const articuloActual =
+    await obtenerArticuloPorIdEnBaseDeDatos(
+      idConvertido,
+    );
+
+  if (!articuloActual) {
+    throw new Error(
+      "El artículo no existe",
+    );
+  }
+
+  const actualizado =
+    await actualizarArchivadoArticuloEnBaseDeDatos(
+      idConvertido,
+      archivado,
+    );
+
+  if (!actualizado) {
+    throw new Error(
+      "No se pudo actualizar el archivo de la publicación",
+    );
+  }
+
+  const articuloActualizado =
+    await obtenerArticuloPorIdEnBaseDeDatos(
+      idConvertido,
+    );
+
+  if (!articuloActualizado) {
+    throw new Error(
+      "La publicación fue actualizada, pero no pudo recuperarse",
+    );
+  }
+
+  return articuloActualizado;
 }

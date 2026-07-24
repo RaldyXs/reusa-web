@@ -7,7 +7,10 @@ export interface Articulo extends RowDataPacket {
   precio: string;
   condicion: "nuevo" | "reparado" | "usado";
   ubicacion: string | null;
-  estado: "activo" | "vendido" | "archivado";
+
+  estado: "activo" | "vendido";
+  archivado: number;
+
   fecha_publicacion: Date;
 
   categoria_id: number;
