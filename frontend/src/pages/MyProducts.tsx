@@ -8,7 +8,11 @@ import {
   RotateCcw,
   Tag,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "../hooks/useAuth";
@@ -16,7 +20,7 @@ import type { Articulo } from "../interfaces/articulo";
 import {
   actualizarArchivadoArticulo,
   actualizarEstadoArticulo,
-  obtenerArticulos,
+  obtenerMisArticulos,
   type EstadoArticulo,
 } from "../services/articuloService";
 
@@ -58,14 +62,8 @@ function MyProducts() {
           );
         }
 
-        const datos = await obtenerArticulos();
-
         const publicacionesDelUsuario =
-          datos.filter(
-            (articulo) =>
-              Number(articulo.vendedor_id) ===
-              Number(usuario.usuarioId),
-          );
+          await obtenerMisArticulos();
 
         if (componenteActivo) {
           setArticulos(
@@ -455,43 +453,45 @@ function MyProducts() {
                       Editar
                     </button>
 
-                    {!estaArchivado && estaActivo && (
-                      <button
-                        type="button"
-                        disabled={estaProcesando}
-                        onClick={() =>
-                          void cambiarEstado(
-                            articulo.articulo_id,
-                            "vendido",
-                          )
-                        }
-                      >
-                        <CheckCircle2 size={16} />
+                    {!estaArchivado &&
+                      estaActivo && (
+                        <button
+                          type="button"
+                          disabled={estaProcesando}
+                          onClick={() =>
+                            void cambiarEstado(
+                              articulo.articulo_id,
+                              "vendido",
+                            )
+                          }
+                        >
+                          <CheckCircle2 size={16} />
 
-                        {estaProcesando
-                          ? "Guardando..."
-                          : "Marcar vendido"}
-                      </button>
-                    )}
+                          {estaProcesando
+                            ? "Guardando..."
+                            : "Marcar vendido"}
+                        </button>
+                      )}
 
-                    {!estaArchivado && estaVendido && (
-                      <button
-                        type="button"
-                        disabled={estaProcesando}
-                        onClick={() =>
-                          void cambiarEstado(
-                            articulo.articulo_id,
-                            "activo",
-                          )
-                        }
-                      >
-                        <RotateCcw size={16} />
+                    {!estaArchivado &&
+                      estaVendido && (
+                        <button
+                          type="button"
+                          disabled={estaProcesando}
+                          onClick={() =>
+                            void cambiarEstado(
+                              articulo.articulo_id,
+                              "activo",
+                            )
+                          }
+                        >
+                          <RotateCcw size={16} />
 
-                        {estaProcesando
-                          ? "Guardando..."
-                          : "Volver a activar"}
-                      </button>
-                    )}
+                          {estaProcesando
+                            ? "Guardando..."
+                            : "Volver a activar"}
+                        </button>
+                      )}
 
                     <button
                       type="button"

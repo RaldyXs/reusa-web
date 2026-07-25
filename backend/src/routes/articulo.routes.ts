@@ -8,6 +8,7 @@ import {
   guardarImagenesArticulo,
   obtenerArticulo,
   obtenerArticulos,
+  obtenerMisPublicaciones,
   publicarArticulo,
 } from "../controllers/articulo.controller.js";
 
@@ -21,6 +22,16 @@ import {
 } from "../middlewares/upload.middleware.js";
 
 const articuloRouter = Router();
+
+articuloRouter.get(
+  "/mios",
+  verificarToken,
+  permitirRoles([
+    "vendedor",
+    "administrador",
+  ]),
+  obtenerMisPublicaciones,
+);
 
 articuloRouter.get("/", obtenerArticulos);
 
@@ -85,6 +96,9 @@ articuloRouter.put(
   editarArticulo,
 );
 
-articuloRouter.get("/:id", obtenerArticulo);
+articuloRouter.get(
+  "/:id",
+  obtenerArticulo,
+);
 
 export default articuloRouter;

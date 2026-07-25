@@ -64,7 +64,62 @@ export async function buscarArticulosEnBaseDeDatos(
 
   return resultado[0].map((articulo) => ({
     ...articulo,
-    archivado: Number(articulo.archivado ?? 0),
+    archivado: Number(
+      articulo.archivado ?? 0,
+    ),
+  }));
+}
+
+export async function obtenerArticulosPorVendedorId(
+  vendedorId: number,
+): Promise<Articulo[]> {
+  const [filas] = await pool.execute<Articulo[]>(
+    `
+      SELECT
+        a.articulo_id,
+        a.vendedor_id,
+        a.categoria_id,
+        a.titulo,
+        a.descripcion,
+        a.precio,
+        a.condicion,
+        a.ubicacion,
+        a.estado,
+        a.archivado,
+        a.fecha_publicacion,
+        c.nombre AS categoria,
+        CONCAT(
+          u.nombre,
+          ' ',
+          u.apellido
+        ) AS vendedor,
+        (
+          SELECT ia.url_imagen
+          FROM imagenes_articulos ia
+          WHERE ia.articulo_id = a.articulo_id
+          ORDER BY
+            ia.es_principal DESC,
+            ia.orden ASC,
+            ia.imagen_id ASC
+          LIMIT 1
+        ) AS imagen_principal
+      FROM articulos a
+      INNER JOIN categorias c
+        ON c.categoria_id = a.categoria_id
+      INNER JOIN usuarios u
+        ON u.usuario_id = a.vendedor_id
+      WHERE a.vendedor_id = ?
+      ORDER BY a.fecha_publicacion DESC
+    `,
+    [vendedorId],
+  );
+
+  return filas.map((articulo) => ({
+    ...articulo,
+    archivado: Number(
+      articulo.archivado ?? 0,
+    ),
+    imagenes: [],
   }));
 }
 
@@ -134,7 +189,9 @@ export async function obtenerArticuloPorIdEnBaseDeDatos(
 
   return {
     ...articulo,
-    archivado: Number(articulo.archivado),
+    archivado: Number(
+      articulo.archivado,
+    ),
     imagenes: filasImagenes.map(
       (imagen) => imagen.url_imagen,
     ),
@@ -282,7 +339,9 @@ export async function contarImagenesArticulo(
       [articuloId],
     );
 
-  return Number(filas[0]?.cantidad ?? 0);
+  return Number(
+    filas[0]?.cantidad ?? 0,
+  );
 }
 
 export async function guardarImagenesArticuloEnBaseDeDatos(
@@ -293,7 +352,8 @@ export async function guardarImagenesArticuloEnBaseDeDatos(
     return;
   }
 
-  const conexion = await pool.getConnection();
+  const conexion =
+    await pool.getConnection();
 
   try {
     await conexion.beginTransaction();
@@ -331,7 +391,8 @@ export async function eliminarImagenArticuloEnBaseDeDatos(
   articuloId: number,
   urlImagen: string,
 ): Promise<boolean> {
-  const conexion = await pool.getConnection();
+  const conexion =
+    await pool.getConnection();
 
   try {
     await conexion.beginTransaction();
@@ -366,7 +427,9 @@ export async function eliminarImagenArticuloEnBaseDeDatos(
       [imagen.imagen_id],
     );
 
-    if (Number(imagen.es_principal) === 1) {
+    if (
+      Number(imagen.es_principal) === 1
+    ) {
       const [restantes] =
         await conexion.execute<ImagenGuardadaRow[]>(
           `
@@ -384,7 +447,8 @@ export async function eliminarImagenArticuloEnBaseDeDatos(
           [articuloId],
         );
 
-      const nuevaPrincipal = restantes[0];
+      const nuevaPrincipal =
+        restantes[0];
 
       if (nuevaPrincipal) {
         await conexion.execute<ResultSetHeader>(
@@ -393,7 +457,9 @@ export async function eliminarImagenArticuloEnBaseDeDatos(
             SET es_principal = 1
             WHERE imagen_id = ?
           `,
-          [nuevaPrincipal.imagen_id],
+          [
+            nuevaPrincipal.imagen_id,
+          ],
         );
       }
     }

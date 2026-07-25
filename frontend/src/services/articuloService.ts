@@ -117,6 +117,29 @@ export async function obtenerArticulos(): Promise<Articulo[]> {
   return data.articulos;
 }
 
+export async function obtenerMisArticulos(): Promise<Articulo[]> {
+  const response = await fetch(
+    `${API_URL}/mios`,
+    {
+      headers: {
+        Authorization: `Bearer ${obtenerToken()}`,
+      },
+    },
+  );
+
+  const data =
+    (await response.json()) as ArticulosResponse;
+
+  if (!response.ok || !data.ok) {
+    throw new Error(
+      data.message ??
+        "No se pudieron obtener tus publicaciones",
+    );
+  }
+
+  return data.articulos;
+}
+
 export async function buscarArticulos(
   termino: string,
 ): Promise<Articulo[]> {

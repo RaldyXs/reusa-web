@@ -10,6 +10,7 @@ import {
   buscarArticulosEnBaseDeDatos,
   crearArticuloEnBaseDeDatos,
   obtenerArticuloPorIdEnBaseDeDatos,
+  obtenerArticulosPorVendedorId,
   type ActualizarArticuloDatos,
   type EstadoArticulo,
 } from "../repositories/articulo.repository.js";
@@ -58,6 +59,23 @@ function convertirArticuloId(
   return idConvertido;
 }
 
+function convertirVendedorId(
+  vendedorId: number,
+): number {
+  const idConvertido = Number(vendedorId);
+
+  if (
+    !Number.isInteger(idConvertido) ||
+    idConvertido < 1
+  ) {
+    throw new Error(
+      "El identificador del vendedor no es válido",
+    );
+  }
+
+  return idConvertido;
+}
+
 function validarDatosArticulo(
   entrada: ActualizarArticuloEntrada,
 ): ActualizarArticuloDatos {
@@ -77,6 +95,7 @@ function validarDatosArticulo(
       : "";
 
   const precio = Number(entrada.precio);
+
   const categoriaId = Number(
     entrada.categoriaId,
   );
@@ -169,6 +188,17 @@ export async function buscarArticulos(
   return buscarArticulosEnBaseDeDatos(
     terminoLimpio,
     categoriaConvertida,
+  );
+}
+
+export async function obtenerMisArticulos(
+  vendedorId: number,
+): Promise<Articulo[]> {
+  const idConvertido =
+    convertirVendedorId(vendedorId);
+
+  return obtenerArticulosPorVendedorId(
+    idConvertido,
   );
 }
 

@@ -12,6 +12,7 @@ import {
   buscarArticulos,
   crearArticulo,
   obtenerArticuloPorId,
+  obtenerMisArticulos,
 } from "../services/articulo.service.js";
 
 import {
@@ -124,6 +125,38 @@ export async function obtenerArticulos(
     const articulos = await buscarArticulos(
       termino,
       categoriaId,
+    );
+
+    response.status(200).json({
+      ok: true,
+      total: articulos.length,
+      articulos,
+    });
+  } catch (error) {
+    response.status(400).json({
+      ok: false,
+      message: obtenerMensajeError(error),
+    });
+  }
+}
+
+export async function obtenerMisPublicaciones(
+  request: RequestAutenticado,
+  response: Response,
+): Promise<void> {
+  try {
+    if (!request.usuario) {
+      response.status(401).json({
+        ok: false,
+        message:
+          "Debes iniciar sesión para ver tus publicaciones",
+      });
+
+      return;
+    }
+
+    const articulos = await obtenerMisArticulos(
+      request.usuario.usuarioId,
     );
 
     response.status(200).json({
