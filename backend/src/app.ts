@@ -5,6 +5,7 @@ import express from "express";
 
 import articuloRouter from "./routes/articulo.routes.js";
 import authRouter from "./routes/auth.routes.js";
+import categoriaRouter from "./routes/categoria.routes.js";
 
 const app = express();
 
@@ -42,5 +43,6 @@ app.get("/api/health", (_request, response) => {
 
 app.use("/api/auth", authRouter);
 app.use("/api/articulos", articuloRouter);
+app.use("/api/categorias", categoriaRouter);
 
 export default app;

@@ -1,8 +1,7 @@
 import type { RowDataPacket } from "mysql2";
 
 export type RolUsuario =
-  | "comprador"
-  | "vendedor"
+  | "usuario"
   | "administrador";
 
 export interface UsuarioAutenticacion

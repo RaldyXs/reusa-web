@@ -27,7 +27,7 @@ articuloRouter.get(
   "/mios",
   verificarToken,
   permitirRoles([
-    "vendedor",
+    "usuario",
     "administrador",
   ]),
   obtenerMisPublicaciones,
@@ -39,7 +39,7 @@ articuloRouter.post(
   "/",
   verificarToken,
   permitirRoles([
-    "vendedor",
+    "usuario",
     "administrador",
   ]),
   publicarArticulo,
@@ -49,7 +49,7 @@ articuloRouter.post(
   "/:id/imagenes",
   verificarToken,
   permitirRoles([
-    "vendedor",
+    "usuario",
     "administrador",
   ]),
   subirImagenesArticulo,
@@ -60,7 +60,7 @@ articuloRouter.delete(
   "/:id/imagenes",
   verificarToken,
   permitirRoles([
-    "vendedor",
+    "usuario",
     "administrador",
   ]),
   eliminarImagenArticulo,
@@ -70,7 +70,7 @@ articuloRouter.patch(
   "/:id/estado",
   verificarToken,
   permitirRoles([
-    "vendedor",
+    "usuario",
     "administrador",
   ]),
   cambiarEstadoArticulo,
@@ -80,7 +80,7 @@ articuloRouter.patch(
   "/:id/archivado",
   verificarToken,
   permitirRoles([
-    "vendedor",
+    "usuario",
     "administrador",
   ]),
   cambiarArchivadoArticulo,
@@ -90,7 +90,7 @@ articuloRouter.put(
   "/:id",
   verificarToken,
   permitirRoles([
-    "vendedor",
+    "usuario",
     "administrador",
   ]),
   editarArticulo,

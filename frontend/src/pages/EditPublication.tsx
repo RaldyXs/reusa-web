@@ -37,6 +37,21 @@ interface VistaPrevia {
   url: string;
 }
 
+interface Categoria {
+  categoria_id: number;
+  nombre: string;
+}
+
+interface RespuestaCategorias {
+  ok: boolean;
+  categorias?: Categoria[];
+  message?: string;
+}
+
+const API_URL =
+  import.meta.env.VITE_API_URL ??
+  "http://localhost:3000/api";
+
 const formularioInicial: FormularioArticulo = {
   titulo: "",
   descripcion: "",
@@ -51,7 +66,17 @@ function EditPublication() {
   const { id } = useParams();
 
   const [formulario, setFormulario] =
-    useState<FormularioArticulo>(formularioInicial);
+    useState<FormularioArticulo>(
+      formularioInicial,
+    );
+
+  const [categorias, setCategorias] =
+    useState<Categoria[]>([]);
+
+  const [
+    cargandoCategorias,
+    setCargandoCategorias,
+  ] = useState(true);
 
   const [imagenesActuales, setImagenesActuales] =
     useState<string[]>([]);
@@ -60,16 +85,71 @@ function EditPublication() {
     useState<VistaPrevia[]>([]);
 
   const [cargando, setCargando] = useState(true);
-  const [guardando, setGuardando] = useState(false);
-  const [imagenEliminando, setImagenEliminando] =
-    useState<string | null>(null);
+
+  const [guardando, setGuardando] =
+    useState(false);
+
+  const [
+    imagenEliminando,
+    setImagenEliminando,
+  ] = useState<string | null>(null);
 
   const [error, setError] = useState("");
 
   useEffect(() => {
     let componenteActivo = true;
 
-    async function cargarArticulo() {
+    async function cargarCategorias(): Promise<void> {
+      try {
+        setCargandoCategorias(true);
+
+        const response = await fetch(
+          `${API_URL}/categorias`,
+        );
+
+        const datos =
+          (await response.json()) as RespuestaCategorias;
+
+        if (!response.ok || !datos.ok) {
+          throw new Error(
+            datos.message ??
+              "No se pudieron cargar las categorías",
+          );
+        }
+
+        if (componenteActivo) {
+          setCategorias(
+            Array.isArray(datos.categorias)
+              ? datos.categorias
+              : [],
+          );
+        }
+      } catch (errorDesconocido) {
+        if (componenteActivo) {
+          setError(
+            errorDesconocido instanceof Error
+              ? errorDesconocido.message
+              : "No se pudieron cargar las categorías",
+          );
+        }
+      } finally {
+        if (componenteActivo) {
+          setCargandoCategorias(false);
+        }
+      }
+    }
+
+    void cargarCategorias();
+
+    return () => {
+      componenteActivo = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let componenteActivo = true;
+
+    async function cargarArticulo(): Promise<void> {
       try {
         setCargando(true);
         setError("");
@@ -94,10 +174,12 @@ function EditPublication() {
 
         setFormulario({
           titulo: articulo.titulo,
-          descripcion: articulo.descripcion ?? "",
+          descripcion:
+            articulo.descripcion ?? "",
           precio: String(articulo.precio),
           condicion: articulo.condicion,
-          ubicacion: articulo.ubicacion ?? "",
+          ubicacion:
+            articulo.ubicacion ?? "",
           categoriaId: String(
             articulo.categoria_id ?? "",
           ),
@@ -111,7 +193,9 @@ function EditPublication() {
               ? [articulo.imagen_principal]
               : [];
 
-        setImagenesActuales(imagenesRecibidas);
+        setImagenesActuales(
+          imagenesRecibidas,
+        );
       } catch (errorDesconocido) {
         if (!componenteActivo) {
           return;
@@ -138,13 +222,14 @@ function EditPublication() {
 
   function manejarImagenes(
     event: ChangeEvent<HTMLInputElement>,
-  ) {
+  ): void {
     const archivos = Array.from(
       event.target.files ?? [],
     );
 
     const cantidadTotal =
-      imagenesActuales.length + imagenesNuevas.length;
+      imagenesActuales.length +
+      imagenesNuevas.length;
 
     const disponibles = Math.max(
       0,
@@ -166,16 +251,22 @@ function EditPublication() {
     event.target.value = "";
   }
 
-  function eliminarImagenNueva(indice: number) {
+  function eliminarImagenNueva(
+    indice: number,
+  ): void {
     setImagenesNuevas((actuales) => {
-      const imagenEliminada = actuales[indice];
+      const imagenEliminada =
+        actuales[indice];
 
       if (imagenEliminada) {
-        URL.revokeObjectURL(imagenEliminada.url);
+        URL.revokeObjectURL(
+          imagenEliminada.url,
+        );
       }
 
       return actuales.filter(
-        (_imagen, posicion) => posicion !== indice,
+        (_imagen, posicion) =>
+          posicion !== indice,
       );
     });
   }
@@ -216,13 +307,20 @@ function EditPublication() {
 
       const imagenesRecibidas =
         articuloActualizado.imagenes &&
-        articuloActualizado.imagenes.length > 0
+        articuloActualizado.imagenes.length >
+          0
           ? articuloActualizado.imagenes
-          : articuloActualizado.imagen_principal
-            ? [articuloActualizado.imagen_principal]
+          : articuloActualizado
+                .imagen_principal
+            ? [
+                articuloActualizado
+                  .imagen_principal,
+              ]
             : [];
 
-      setImagenesActuales(imagenesRecibidas);
+      setImagenesActuales(
+        imagenesRecibidas,
+      );
     } catch (errorDesconocido) {
       setError(
         errorDesconocido instanceof Error
@@ -239,7 +337,7 @@ function EditPublication() {
       | ChangeEvent<HTMLInputElement>
       | ChangeEvent<HTMLTextAreaElement>
       | ChangeEvent<HTMLSelectElement>,
-  ) {
+  ): void {
     const { name, value } = event.target;
 
     setFormulario((actual) => ({
@@ -250,13 +348,15 @@ function EditPublication() {
 
   async function manejarEnvio(
     event: FormEvent<HTMLFormElement>,
-  ) {
+  ): Promise<void> {
     event.preventDefault();
 
     setError("");
 
     const articuloId = Number(id);
-    const precio = Number(formulario.precio);
+    const precio = Number(
+      formulario.precio,
+    );
     const categoriaId = Number(
       formulario.categoriaId,
     );
@@ -268,20 +368,28 @@ function EditPublication() {
       setError(
         "El identificador del artículo no es válido.",
       );
+
       return;
     }
 
-    if (formulario.titulo.trim().length < 3) {
+    if (
+      formulario.titulo.trim().length < 3
+    ) {
       setError(
         "El título debe tener al menos 3 caracteres.",
       );
+
       return;
     }
 
-    if (formulario.descripcion.trim().length < 10) {
+    if (
+      formulario.descripcion.trim().length <
+      10
+    ) {
       setError(
         "La descripción debe tener al menos 10 caracteres.",
       );
+
       return;
     }
 
@@ -289,17 +397,29 @@ function EditPublication() {
       !Number.isInteger(categoriaId) ||
       categoriaId < 1
     ) {
-      setError("Debes seleccionar una categoría.");
+      setError(
+        "Debes seleccionar una categoría.",
+      );
+
       return;
     }
 
-    if (!Number.isFinite(precio) || precio <= 0) {
-      setError("El precio debe ser mayor que cero.");
+    if (
+      !Number.isFinite(precio) ||
+      precio <= 0
+    ) {
+      setError(
+        "El precio debe ser mayor que cero.",
+      );
+
       return;
     }
 
     if (!formulario.ubicacion.trim()) {
-      setError("La ubicación es obligatoria.");
+      setError(
+        "La ubicación es obligatoria.",
+      );
+
       return;
     }
 
@@ -307,16 +427,21 @@ function EditPublication() {
       setGuardando(true);
 
       let articuloActualizado =
-        await actualizarArticulo(articuloId, {
-          titulo: formulario.titulo.trim(),
-          descripcion:
-            formulario.descripcion.trim(),
-          precio,
-          condicion: formulario.condicion,
-          ubicacion:
-            formulario.ubicacion.trim(),
-          categoriaId,
-        });
+        await actualizarArticulo(
+          articuloId,
+          {
+            titulo:
+              formulario.titulo.trim(),
+            descripcion:
+              formulario.descripcion.trim(),
+            precio,
+            condicion:
+              formulario.condicion,
+            ubicacion:
+              formulario.ubicacion.trim(),
+            categoriaId,
+          },
+        );
 
       if (imagenesNuevas.length > 0) {
         articuloActualizado =
@@ -327,6 +452,14 @@ function EditPublication() {
             ),
           );
       }
+
+      imagenesNuevas.forEach(
+        (imagen) => {
+          URL.revokeObjectURL(
+            imagen.url,
+          );
+        },
+      );
 
       navigate(
         `/producto/${articuloActualizado.articulo_id}`,
@@ -348,7 +481,8 @@ function EditPublication() {
   }
 
   const cantidadImagenes =
-    imagenesActuales.length + imagenesNuevas.length;
+    imagenesActuales.length +
+    imagenesNuevas.length;
 
   if (cargando) {
     return (
@@ -366,12 +500,16 @@ function EditPublication() {
         <h1>Editar publicación</h1>
 
         <p>
-          Modifica la información y las imágenes de tu artículo.
+          Modifica la información y las imágenes
+          de tu artículo.
         </p>
       </header>
 
       {error && (
-        <div className="error-message" role="alert">
+        <div
+          className="error-message"
+          role="alert"
+        >
           {error}
         </div>
       )}
@@ -390,7 +528,8 @@ function EditPublication() {
                 <h2>Imágenes del producto</h2>
 
                 <p>
-                  Tienes {cantidadImagenes} de 5 imágenes.
+                  Tienes {cantidadImagenes} de 5
+                  imágenes.
                 </p>
               </div>
             </div>
@@ -416,7 +555,8 @@ function EditPublication() {
             </label>
 
             {(imagenesActuales.length > 0 ||
-              imagenesNuevas.length > 0) && (
+              imagenesNuevas.length >
+                0) && (
               <div className="image-preview-grid">
                 {imagenesActuales.map(
                   (imagen, indice) => (
@@ -438,7 +578,8 @@ function EditPublication() {
                       <button
                         type="button"
                         disabled={
-                          imagenEliminando === imagen
+                          imagenEliminando ===
+                          imagen
                         }
                         onClick={() =>
                           void eliminarImagenGuardada(
@@ -447,7 +588,8 @@ function EditPublication() {
                         }
                         aria-label="Eliminar imagen guardada"
                       >
-                        {imagenEliminando === imagen
+                        {imagenEliminando ===
+                        imagen
                           ? "..."
                           : "×"}
                       </button>
@@ -473,7 +615,9 @@ function EditPublication() {
                       <button
                         type="button"
                         onClick={() =>
-                          eliminarImagenNueva(indice)
+                          eliminarImagenNueva(
+                            indice,
+                          )
                         }
                         aria-label="Eliminar imagen nueva"
                       >
@@ -492,7 +636,8 @@ function EditPublication() {
                 <h2>Detalles generales</h2>
 
                 <p>
-                  Actualiza los datos principales del artículo.
+                  Actualiza los datos principales
+                  del artículo.
                 </p>
               </div>
             </div>
@@ -514,16 +659,37 @@ function EditPublication() {
 
                 <select
                   name="categoriaId"
-                  value={formulario.categoriaId}
+                  value={
+                    formulario.categoriaId
+                  }
                   onChange={manejarCambio}
+                  disabled={
+                    cargandoCategorias ||
+                    categorias.length === 0
+                  }
                 >
                   <option value="">
-                    Selecciona una categoría
+                    {cargandoCategorias
+                      ? "Cargando categorías..."
+                      : categorias.length === 0
+                        ? "No hay categorías disponibles"
+                        : "Selecciona una categoría"}
                   </option>
-                  <option value="1">Electrónica</option>
-                  <option value="2">Hogar</option>
-                  <option value="3">Vehículos</option>
-                  <option value="4">Ropa</option>
+
+                  {categorias.map(
+                    (categoria) => (
+                      <option
+                        key={
+                          categoria.categoria_id
+                        }
+                        value={
+                          categoria.categoria_id
+                        }
+                      >
+                        {categoria.nombre}
+                      </option>
+                    ),
+                  )}
                 </select>
               </label>
 
@@ -535,8 +701,14 @@ function EditPublication() {
                   value={formulario.condicion}
                   onChange={manejarCambio}
                 >
-                  <option value="nuevo">Nuevo</option>
-                  <option value="usado">Usado</option>
+                  <option value="nuevo">
+                    Nuevo
+                  </option>
+
+                  <option value="usado">
+                    Usado
+                  </option>
+
                   <option value="reparado">
                     Reparado
                   </option>
@@ -549,7 +721,9 @@ function EditPublication() {
                 <textarea
                   name="descripcion"
                   rows={6}
-                  value={formulario.descripcion}
+                  value={
+                    formulario.descripcion
+                  }
                   onChange={manejarCambio}
                 />
               </label>
@@ -593,7 +767,9 @@ function EditPublication() {
                 <input
                   type="text"
                   name="ubicacion"
-                  value={formulario.ubicacion}
+                  value={
+                    formulario.ubicacion
+                  }
                   onChange={manejarCambio}
                 />
               </div>
@@ -603,7 +779,11 @@ function EditPublication() {
           <button
             className="publish-submit"
             type="submit"
-            disabled={guardando}
+            disabled={
+              guardando ||
+              cargandoCategorias ||
+              categorias.length === 0
+            }
           >
             <Save size={17} />
 
@@ -616,7 +796,9 @@ function EditPublication() {
             className="publish-preview-button"
             type="button"
             onClick={() =>
-              navigate("/mis-publicaciones")
+              navigate(
+                "/mis-publicaciones",
+              )
             }
           >
             <ArrowLeft size={17} />

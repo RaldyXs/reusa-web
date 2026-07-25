@@ -1,4 +1,6 @@
 import type {
+  RegistroUsuarioDatos,
+  RegistroUsuarioRespuesta,
   Sesion,
   UsuarioSesion,
 } from "../interfaces/auth";
@@ -46,4 +48,35 @@ export async function iniciarSesion(
     token: resultado.token,
     usuario: resultado.usuario,
   };
+}
+
+export async function registrarUsuario(
+  datos: RegistroUsuarioDatos,
+): Promise<UsuarioSesion> {
+  const response = await fetch(
+    `${API_URL}/registro`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(datos),
+    },
+  );
+
+  const resultado =
+    (await response.json()) as RegistroUsuarioRespuesta;
+
+  if (
+    !response.ok ||
+    !resultado.ok ||
+    !resultado.usuario
+  ) {
+    throw new Error(
+      resultado.message ??
+        "No se pudo registrar el usuario",
+    );
+  }
+
+  return resultado.usuario;
 }

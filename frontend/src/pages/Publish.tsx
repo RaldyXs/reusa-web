@@ -4,6 +4,7 @@ import {
   Upload,
 } from "lucide-react";
 import {
+  useEffect,
   useState,
   type ChangeEvent,
   type FormEvent,
@@ -20,11 +21,34 @@ interface VistaPrevia {
   url: string;
 }
 
+interface Categoria {
+  categoria_id: number;
+  nombre: string;
+}
+
+interface RespuestaCategorias {
+  ok: boolean;
+  categorias?: Categoria[];
+  message?: string;
+}
+
+const API_URL =
+  import.meta.env.VITE_API_URL ??
+  "http://localhost:3000/api";
+
 function Publish() {
   const navigate = useNavigate();
 
   const [imagenes, setImagenes] =
     useState<VistaPrevia[]>([]);
+
+  const [categorias, setCategorias] =
+    useState<Categoria[]>([]);
+
+  const [
+    cargandoCategorias,
+    setCargandoCategorias,
+  ] = useState(true);
 
   const [guardando, setGuardando] =
     useState(false);
@@ -32,9 +56,59 @@ function Publish() {
   const [error, setError] = useState("");
   const [mensaje, setMensaje] = useState("");
 
+  useEffect(() => {
+    let componenteActivo = true;
+
+    async function cargarCategorias(): Promise<void> {
+      try {
+        setCargandoCategorias(true);
+
+        const response = await fetch(
+          `${API_URL}/categorias`,
+        );
+
+        const datos =
+          (await response.json()) as RespuestaCategorias;
+
+        if (!response.ok || !datos.ok) {
+          throw new Error(
+            datos.message ??
+              "No se pudieron cargar las categorías",
+          );
+        }
+
+        if (componenteActivo) {
+          setCategorias(
+            Array.isArray(datos.categorias)
+              ? datos.categorias
+              : [],
+          );
+        }
+      } catch (errorDesconocido) {
+        if (componenteActivo) {
+          setError(
+            errorDesconocido instanceof Error
+              ? errorDesconocido.message
+              : "No se pudieron cargar las categorías",
+          );
+        }
+      } finally {
+        if (componenteActivo) {
+          setCargandoCategorias(false);
+        }
+      }
+    }
+
+    void cargarCategorias();
+
+    return () => {
+      componenteActivo = false;
+    };
+  }, []);
+
   function manejarImagenes(
     event: ChangeEvent<HTMLInputElement>,
-  ) {
+  ): void {
     const archivos = Array.from(
       event.target.files ?? [],
     );
@@ -56,7 +130,7 @@ function Publish() {
     event.target.value = "";
   }
 
-  function eliminarImagen(indice: number) {
+  function eliminarImagen(indice: number): void {
     setImagenes((actuales) => {
       const imagenEliminada = actuales[indice];
 
@@ -75,7 +149,7 @@ function Publish() {
 
   async function manejarEnvio(
     event: FormEvent<HTMLFormElement>,
-  ) {
+  ): Promise<void> {
     event.preventDefault();
 
     const datosFormulario = new FormData(
@@ -376,33 +450,40 @@ function Publish() {
               <label className="form-field">
                 <span>Categoría</span>
 
-                <select name="categoria">
+                <select
+                  name="categoria"
+                  defaultValue=""
+                  disabled={
+                    cargandoCategorias ||
+                    categorias.length === 0
+                  }
+                >
                   <option value="">
-                    Selecciona una categoría
+                    {cargandoCategorias
+                      ? "Cargando categorías..."
+                      : categorias.length === 0
+                        ? "No hay categorías disponibles"
+                        : "Selecciona una categoría"}
                   </option>
 
-                  <option value="1">
-                    Electrónica
-                  </option>
-
-                  <option value="2">
-                    Hogar
-                  </option>
-
-                  <option value="3">
-                    Vehículos
-                  </option>
-
-                  <option value="4">
-                    Ropa
-                  </option>
+                  {categorias.map((categoria) => (
+                    <option
+                      key={categoria.categoria_id}
+                      value={categoria.categoria_id}
+                    >
+                      {categoria.nombre}
+                    </option>
+                  ))}
                 </select>
               </label>
 
               <label className="form-field">
                 <span>Condición</span>
 
-                <select name="condicion">
+                <select
+                  name="condicion"
+                  defaultValue="usado"
+                >
                   <option value="nuevo">
                     Nuevo
                   </option>
@@ -484,13 +565,16 @@ function Publish() {
           <button
             className="publish-submit"
             type="submit"
-            disabled={guardando}
+            disabled={
+              guardando ||
+              cargandoCategorias ||
+              categorias.length === 0
+            }
           >
             {guardando
               ? "Publicando..."
               : "Publicar artículo"}
           </button>
-
         </aside>
       </form>
     </section>

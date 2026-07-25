@@ -20,6 +20,7 @@ import MyProducts from "./pages/MyProducts";
 import ProductDetail from "./pages/ProductDetail";
 import Publish from "./pages/Publish";
 import PurchaseHistory from "./pages/PurchaseHistory";
+import Register from "./pages/Register";
 import SalesHistory from "./pages/SalesHistory";
 import Saved from "./pages/Saved";
 import SearchResults from "./pages/SearchResults";
@@ -43,6 +44,11 @@ function App() {
           <Route
             path="/login"
             element={<Login />}
+          />
+
+          <Route
+            path="/registro"
+            element={<Register />}
           />
 
           <Route
@@ -141,7 +147,7 @@ function App() {
             element={
               <ProtectedRoute
                 rolesPermitidos={[
-                  "vendedor",
+                  "usuario",
                   "administrador",
                 ]}
               >
@@ -157,7 +163,7 @@ function App() {
             element={
               <ProtectedRoute
                 rolesPermitidos={[
-                  "vendedor",
+                  "usuario",
                   "administrador",
                 ]}
               >

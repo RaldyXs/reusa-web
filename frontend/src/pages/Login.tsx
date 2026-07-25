@@ -2,6 +2,7 @@ import {
   LockKeyhole,
   LogIn,
   Mail,
+  UserPlus,
 } from "lucide-react";
 import {
   type FormEvent,
@@ -53,7 +54,7 @@ function Login() {
 
   async function manejarEnvio(
     event: FormEvent<HTMLFormElement>,
-  ) {
+  ): Promise<void> {
     event.preventDefault();
 
     setError("");
@@ -62,6 +63,7 @@ function Login() {
       setError(
         "Debes escribir el correo y la contraseña.",
       );
+
       return;
     }
 
@@ -181,6 +183,17 @@ function Login() {
               : "Iniciar sesión"}
           </button>
         </form>
+
+        <button
+          className="login-back"
+          type="button"
+          onClick={() =>
+            navigate("/registro")
+          }
+        >
+          <UserPlus size={17} />
+          Crear una cuenta
+        </button>
 
         <button
           className="login-back"
