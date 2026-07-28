@@ -3,6 +3,7 @@ import path from "node:path";
 import cors from "cors";
 import express from "express";
 
+import adminRouter from "./routes/admin.routes.js";
 import articuloRouter from "./routes/articulo.routes.js";
 import authRouter from "./routes/auth.routes.js";
 import categoriaRouter from "./routes/categoria.routes.js";
@@ -33,16 +34,20 @@ app.use(
   express.static(carpetaUploads),
 );
 
-app.get("/api/health", (_request, response) => {
-  response.status(200).json({
-    ok: true,
-    message:
-      "API de Re-Usa Web funcionando correctamente",
-  });
-});
+app.get(
+  "/api/health",
+  (_request, response) => {
+    response.status(200).json({
+      ok: true,
+      message:
+        "API de Re-Usa Web funcionando correctamente",
+    });
+  },
+);
 
 app.use("/api/auth", authRouter);
 app.use("/api/articulos", articuloRouter);
 app.use("/api/categorias", categoriaRouter);
+app.use("/api/admin", adminRouter);
 
 export default app;

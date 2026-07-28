@@ -9,7 +9,6 @@ import {
   useState,
 } from "react";
 import {
-  Navigate,
   useLocation,
   useNavigate,
 } from "react-router-dom";
@@ -25,9 +24,8 @@ function Login() {
   const location = useLocation();
 
   const {
-    autenticado,
-    usuario,
     login,
+    logout,
   } = useAuth();
 
   const [email, setEmail] = useState("");
@@ -38,19 +36,6 @@ function Login() {
     useState(false);
 
   const [error, setError] = useState("");
-
-  if (autenticado && usuario) {
-    return (
-      <Navigate
-        to={
-          usuario.rol === "administrador"
-            ? "/admin"
-            : "/"
-        }
-        replace
-      />
-    );
-  }
 
   async function manejarEnvio(
     event: FormEvent<HTMLFormElement>,
@@ -70,15 +55,16 @@ function Login() {
     try {
       setCargando(true);
 
+      /*
+       * Elimina cualquier sesión anterior antes
+       * de iniciar con la cuenta escrita.
+       */
+      logout();
+
       const usuarioAutenticado = await login(
         email.trim().toLowerCase(),
         contrasena,
       );
-
-      const estado =
-        location.state as
-          | EstadoNavegacion
-          | null;
 
       if (
         usuarioAutenticado.rol ===
@@ -91,7 +77,18 @@ function Login() {
         return;
       }
 
-      navigate(estado?.desde ?? "/", {
+      const estado =
+        location.state as
+          | EstadoNavegacion
+          | null;
+
+      const destinoAnterior =
+        estado?.desde &&
+        !estado.desde.startsWith("/admin")
+          ? estado.desde
+          : "/";
+
+      navigate(destinoAnterior, {
         replace: true,
       });
     } catch (errorDesconocido) {

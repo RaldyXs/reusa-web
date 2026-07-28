@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ComponentType, ReactNode } from "react";
 import {
   BrowserRouter,
   Navigate,
@@ -10,8 +10,8 @@ import "./App.css";
 
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import { AuthProvider } from "./contexts/AuthContext";
+import AdminLayout from "./layouts/AdminLayout.tsx";
 import MainLayout from "./layouts/MainLayout";
-import AdminDashboard from "./pages/AdminDashboard";
 import Categories from "./pages/Categories";
 import EditPublication from "./pages/EditPublication";
 import Home from "./pages/Home";
@@ -25,6 +25,12 @@ import SalesHistory from "./pages/SalesHistory";
 import Saved from "./pages/Saved";
 import SearchResults from "./pages/SearchResults";
 import Settings from "./pages/Settings";
+import AdminCategories from "./pages/admin/AdminCategories.tsx";
+import AdminDashboard from "./pages/admin/AdminDashboard.tsx";
+import AdminPublications from "./pages/admin/AdminPublications.tsx";
+import AdminUsers from "./pages/admin/AdminUsers.tsx";
+
+const MainLayoutWithChildren = MainLayout as ComponentType<{ children?: ReactNode }>;
 
 interface ConLayoutProps {
   children: ReactNode;
@@ -33,7 +39,7 @@ interface ConLayoutProps {
 function ConLayout({
   children,
 }: ConLayoutProps) {
-  return <MainLayout>{children}</MainLayout>;
+  return <MainLayoutWithChildren>{children}</MainLayoutWithChildren>;
 }
 
 function App() {
@@ -182,10 +188,30 @@ function App() {
                   "administrador",
                 ]}
               >
-                <AdminDashboard />
+                <AdminLayout />
               </ProtectedRoute>
             }
-          />
+          >
+            <Route
+              index
+              element={<AdminDashboard />}
+            />
+
+            <Route
+              path="usuarios"
+              element={<AdminUsers />}
+            />
+
+            <Route
+              path="publicaciones"
+              element={<AdminPublications />}
+            />
+
+            <Route
+              path="categorias"
+              element={<AdminCategories />}
+            />
+          </Route>
 
           <Route
             path="*"

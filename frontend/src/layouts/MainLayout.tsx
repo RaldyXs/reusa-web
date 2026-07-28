@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+
 import Sidebar from "../components/Sidebar";
 import Topbar from "../components/Topbar";
 
@@ -6,7 +7,9 @@ interface MainLayoutProps {
   children: ReactNode;
 }
 
-function MainLayout({ children }: MainLayoutProps) {
+function MainLayout({
+  children,
+}: MainLayoutProps) {
   return (
     <div className="application">
       <Topbar />
