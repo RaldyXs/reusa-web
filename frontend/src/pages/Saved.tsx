@@ -1,74 +1,71 @@
-import { BookmarkX, Heart, ShoppingBag } from "lucide-react";
-import { useEffect, useState } from "react";
+import {
+  BookmarkX,
+  Heart,
+  ShoppingBag,
+} from "lucide-react";
+import {
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
 import { useNavigate } from "react-router-dom";
 
 import ProductCard from "../components/ProductCard";
-import type { Articulo } from "../interfaces/articulo";
-import { obtenerArticulos } from "../services/articuloService";
 
-const CLAVE_GUARDADOS = "reusa-articulos-guardados";
-
-function obtenerIdsGuardados(): number[] {
-  try {
-    const valorGuardado = localStorage.getItem(CLAVE_GUARDADOS);
-
-    if (!valorGuardado) {
-      return [];
-    }
-
-    const resultado = JSON.parse(valorGuardado) as unknown;
-
-    if (!Array.isArray(resultado)) {
-      return [];
-    }
-
-    return resultado
-      .map(Number)
-      .filter(
-        (articuloId) =>
-          Number.isInteger(articuloId) && articuloId > 0,
-      );
-  } catch {
-    return [];
-  }
-}
+import {
+  obtenerFavoritos,
+  type ArticuloFavorito,
+} from "../services/favoritoService";
 
 function Saved() {
   const navigate = useNavigate();
 
-  const [articulos, setArticulos] = useState<Articulo[]>([]);
-  const [cargando, setCargando] = useState(true);
-  const [error, setError] = useState("");
+  const [articulos, setArticulos] =
+    useState<ArticuloFavorito[]>([]);
 
-  useEffect(() => {
-    let componenteActivo = true;
+  const [cargando, setCargando] =
+    useState(true);
 
-    async function cargarGuardados() {
+  const [error, setError] =
+    useState("");
+
+  const cargarGuardados =
+    useCallback(async (): Promise<void> => {
       try {
         setCargando(true);
         setError("");
 
-        const idsGuardados = obtenerIdsGuardados();
+        const favoritosRecibidos =
+          await obtenerFavoritos();
 
-        if (idsGuardados.length === 0) {
-          if (componenteActivo) {
-            setArticulos([]);
-          }
-
-          return;
-        }
-
-        const todosLosArticulos = await obtenerArticulos();
-
-        const articulosGuardados = todosLosArticulos.filter(
-          (articulo) =>
-            idsGuardados.includes(
-              Number(articulo.articulo_id),
-            ),
+        setArticulos(
+          favoritosRecibidos,
         );
+      } catch (errorDesconocido) {
+        const mensaje =
+          errorDesconocido instanceof Error
+            ? errorDesconocido.message
+            : "Ocurrió un error inesperado";
+
+        setError(mensaje);
+        setArticulos([]);
+      } finally {
+        setCargando(false);
+      }
+    }, []);
+
+  useEffect(() => {
+    let componenteActivo = true;
+
+    async function iniciarCarga() {
+      try {
+        const favoritosRecibidos =
+          await obtenerFavoritos();
 
         if (componenteActivo) {
-          setArticulos(articulosGuardados);
+          setArticulos(
+            favoritosRecibidos,
+          );
         }
       } catch (errorDesconocido) {
         const mensaje =
@@ -87,7 +84,7 @@ function Saved() {
       }
     }
 
-    void cargarGuardados();
+    void iniciarCarga();
 
     return () => {
       componenteActivo = false;
@@ -97,15 +94,20 @@ function Saved() {
   function manejarCambioGuardado(
     articuloId: number,
     guardado: boolean,
-  ) {
-    if (!guardado) {
-      setArticulos((articulosActuales) =>
+  ): void {
+    if (guardado) {
+      return;
+    }
+
+    setArticulos(
+      (articulosActuales) =>
         articulosActuales.filter(
           (articulo) =>
-            articulo.articulo_id !== articuloId,
+            Number(
+              articulo.articulo_id,
+            ) !== articuloId,
         ),
-      );
-    }
+    );
   }
 
   return (
@@ -117,8 +119,8 @@ function Saved() {
           <h1>Artículos guardados</h1>
 
           <p>
-            Consulta los productos que marcaste para verlos más
-            tarde.
+            Consulta los productos que
+            marcaste para verlos más tarde.
           </p>
         </div>
 
@@ -135,8 +137,20 @@ function Saved() {
       </header>
 
       {error ? (
-        <div className="error-message" role="alert">
-          {error}
+        <div
+          className="error-message"
+          role="alert"
+        >
+          <p>{error}</p>
+
+          <button
+            type="button"
+            onClick={() =>
+              void cargarGuardados()
+            }
+          >
+            Intentar nuevamente
+          </button>
         </div>
       ) : cargando ? (
         <p className="status-message">
@@ -148,16 +162,20 @@ function Saved() {
             <BookmarkX size={34} />
           </span>
 
-          <h2>No tienes artículos guardados</h2>
+          <h2>
+            No tienes artículos guardados
+          </h2>
 
           <p>
-            Pulsa el corazón de una publicación para guardarla
-            aquí.
+            Pulsa el corazón de una
+            publicación para guardarla aquí.
           </p>
 
           <button
             type="button"
-            onClick={() => navigate("/marketplace")}
+            onClick={() =>
+              navigate("/marketplace")
+            }
           >
             <ShoppingBag size={18} />
             Explorar marketplace
@@ -168,13 +186,20 @@ function Saved() {
           className="products-grid"
           aria-label="Artículos guardados"
         >
-          {articulos.map((articulo) => (
-            <ProductCard
-              key={articulo.articulo_id}
-              articulo={articulo}
-              onSavedChange={manejarCambioGuardado}
-            />
-          ))}
+          {articulos.map(
+            (articulo) => (
+              <ProductCard
+                key={
+                  articulo.articulo_id
+                }
+                articulo={articulo}
+                inicialmenteGuardado
+                onSavedChange={
+                  manejarCambioGuardado
+                }
+              />
+            ),
+          )}
         </section>
       )}
     </section>

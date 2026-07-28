@@ -5240,3 +5240,395 @@ button {
     width: 100%;
   }
 }
+
+/* =========================================================
+   DASHBOARD ADMINISTRATIVO — GRÁFICOS
+   ========================================================= */
+
+.admin-statistics-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+  margin: 24px 0;
+  gap: 20px;
+}
+
+.admin-chart-card {
+  min-width: 0;
+  padding: 22px;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow:
+    0 8px 24px rgb(15 23 42 / 5%);
+}
+
+.admin-chart-card__header {
+  display: flex;
+  margin-bottom: 24px;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.admin-chart-card__header > div:first-child {
+  min-width: 0;
+}
+
+.admin-chart-card__header span {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--blue);
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.admin-chart-card__header h2 {
+  margin: 0 0 6px;
+  color: #172033;
+  font-size: 18px;
+}
+
+.admin-chart-card__header p {
+  max-width: 470px;
+  margin: 0;
+  color: #7b879a;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.admin-chart-card__icon {
+  display: grid;
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--blue-soft);
+  color: var(--blue);
+  place-items: center;
+}
+
+.admin-chart-empty {
+  display: grid;
+  min-height: 220px;
+  margin: 0;
+  color: #8b95a6;
+  font-size: 12px;
+  text-align: center;
+  place-items: center;
+}
+
+/* ---------- Gráfico mensual ---------- */
+
+.admin-monthly-chart {
+  display: flex;
+  min-height: 250px;
+  padding-top: 16px;
+  border-bottom: 1px solid #e8edf5;
+  align-items: flex-end;
+  gap: 10px;
+  overflow-x: auto;
+}
+
+.admin-monthly-chart__column {
+  display: flex;
+  flex: 1 0 42px;
+  min-width: 42px;
+  height: 230px;
+  align-items: center;
+  justify-content: flex-end;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.admin-monthly-chart__value {
+  min-height: 16px;
+  color: #344056;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.admin-monthly-chart__track {
+  position: relative;
+  display: flex;
+  width: 100%;
+  max-width: 38px;
+  height: 170px;
+  overflow: hidden;
+  border-radius: 8px 8px 2px 2px;
+  background:
+    linear-gradient(
+      to top,
+      #edf2f8,
+      #f8faff
+    );
+  align-items: flex-end;
+}
+
+.admin-monthly-chart__bar {
+  width: 100%;
+  min-height: 5px;
+  border-radius: 8px 8px 2px 2px;
+  background:
+    linear-gradient(
+      180deg,
+      #3d86ee 0%,
+      var(--blue) 100%
+    );
+  box-shadow:
+    0 7px 14px rgb(15 102 232 / 20%);
+  transition:
+    height 260ms ease;
+}
+
+.admin-monthly-chart__column small {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  color: #8a95a6;
+  font-size: 8px;
+  line-height: 1.25;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- Estado de publicaciones ---------- */
+
+.admin-progress-list {
+  display: flex;
+  min-height: 220px;
+  justify-content: center;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.admin-progress-item {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.admin-progress-item__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+}
+
+.admin-progress-item__header > div {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-progress-item__header strong {
+  color: #344056;
+  font-size: 12px;
+}
+
+.admin-progress-item__header > span {
+  color: #6f7b8e;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.admin-progress-dot {
+  display: block;
+  flex: 0 0 auto;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+
+.admin-progress-dot--activo {
+  background: var(--blue);
+}
+
+.admin-progress-dot--vendido {
+  background: #2f9e5b;
+}
+
+.admin-progress-dot--archivado {
+  background: #8994a7;
+}
+
+.admin-progress-track {
+  width: 100%;
+  height: 10px;
+  overflow: hidden;
+  border-radius: 20px;
+  background: #edf1f6;
+}
+
+.admin-progress-bar {
+  height: 100%;
+  min-width: 3px;
+  border-radius: inherit;
+  transition:
+    width 260ms ease;
+}
+
+.admin-progress-bar--activo {
+  background:
+    linear-gradient(
+      90deg,
+      #2c7dec,
+      var(--blue)
+    );
+}
+
+.admin-progress-bar--vendido {
+  background:
+    linear-gradient(
+      90deg,
+      #43b96f,
+      #278447
+    );
+}
+
+.admin-progress-bar--archivado {
+  background:
+    linear-gradient(
+      90deg,
+      #a5adba,
+      #687386
+    );
+}
+
+/* ---------- Publicaciones por categoría ---------- */
+
+.admin-category-chart {
+  display: flex;
+  min-height: 220px;
+  justify-content: center;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.admin-category-chart__item {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.admin-category-chart__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+}
+
+.admin-category-chart__header strong {
+  overflow: hidden;
+  color: #344056;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-category-chart__header span {
+  flex: 0 0 auto;
+  color: var(--blue);
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.admin-category-chart__track {
+  width: 100%;
+  height: 9px;
+  overflow: hidden;
+  border-radius: 20px;
+  background: #edf1f6;
+}
+
+.admin-category-chart__bar {
+  height: 100%;
+  min-width: 3px;
+  border-radius: inherit;
+  background:
+    linear-gradient(
+      90deg,
+      #75a9f3,
+      var(--blue)
+    );
+  transition:
+    width 260ms ease;
+}
+
+/* ---------- Animación actualizar ---------- */
+
+.admin-spin {
+  animation:
+    admin-spin 0.9s linear infinite;
+}
+
+@keyframes admin-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 1050px) {
+  .admin-statistics-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-chart-card {
+    padding: 20px;
+  }
+}
+
+@media (max-width: 720px) {
+  .admin-statistics-grid {
+    gap: 15px;
+  }
+
+  .admin-chart-card {
+    padding: 17px;
+    border-radius: 13px;
+  }
+
+  .admin-chart-card__header {
+    margin-bottom: 19px;
+  }
+
+  .admin-chart-card__header h2 {
+    font-size: 16px;
+  }
+
+  .admin-monthly-chart {
+    min-height: 225px;
+  }
+
+  .admin-monthly-chart__column {
+    flex-basis: 46px;
+    height: 205px;
+  }
+
+  .admin-monthly-chart__track {
+    height: 145px;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-chart-card__header {
+    flex-direction: column;
+  }
+
+  .admin-chart-card__icon {
+    width: 36px;
+    height: 36px;
+    order: -1;
+  }
+
+  .admin-progress-item__header {
+    align-items: flex-start;
+  }
+}

@@ -5,11 +5,20 @@ import FeaturedPanel from "../components/FeaturedPanel";
 import ProductCard from "../components/ProductCard";
 import type { Articulo } from "../interfaces/articulo";
 import { obtenerArticulos } from "../services/articuloService";
+import { obtenerIdsFavoritos } from "../services/favoritoService";
 
 function Home() {
-  const [articulos, setArticulos] = useState<Articulo[]>([]);
-  const [cargando, setCargando] = useState(true);
-  const [error, setError] = useState("");
+  const [articulos, setArticulos] =
+    useState<Articulo[]>([]);
+
+  const [idsFavoritos, setIdsFavoritos] =
+    useState<number[]>([]);
+
+  const [cargando, setCargando] =
+    useState(true);
+
+  const [error, setError] =
+    useState("");
 
   useEffect(() => {
     let componenteActivo = true;
@@ -19,10 +28,21 @@ function Home() {
         setCargando(true);
         setError("");
 
-        const datos = await obtenerArticulos();
+        const datos =
+          await obtenerArticulos();
+
+        let favoritos: number[] = [];
+
+        try {
+          favoritos =
+            await obtenerIdsFavoritos();
+        } catch {
+          favoritos = [];
+        }
 
         if (componenteActivo) {
           setArticulos(datos);
+          setIdsFavoritos(favoritos);
         }
       } catch (errorDesconocido) {
         const mensaje =
@@ -33,6 +53,7 @@ function Home() {
         if (componenteActivo) {
           setError(mensaje);
           setArticulos([]);
+          setIdsFavoritos([]);
         }
       } finally {
         if (componenteActivo) {
@@ -48,6 +69,34 @@ function Home() {
     };
   }, []);
 
+  function manejarCambioGuardado(
+    articuloId: number,
+    guardado: boolean,
+  ): void {
+    setIdsFavoritos(
+      (idsActuales) => {
+        if (guardado) {
+          if (
+            idsActuales.includes(
+              articuloId,
+            )
+          ) {
+            return idsActuales;
+          }
+
+          return [
+            ...idsActuales,
+            articuloId,
+          ];
+        }
+
+        return idsActuales.filter(
+          (id) => id !== articuloId,
+        );
+      },
+    );
+  }
+
   return (
     <div className="home-dashboard">
       <section className="home-dashboard__main">
@@ -60,8 +109,9 @@ function Home() {
             <h1>Descubre</h1>
 
             <p>
-              Explora los artículos publicados recientemente
-              en tu comunidad.
+              Explora los artículos
+              publicados recientemente en
+              tu comunidad.
             </p>
           </div>
 
@@ -70,14 +120,24 @@ function Home() {
             type="button"
             aria-label="Abrir filtros"
           >
-            <SlidersHorizontal size={17} />
+            <SlidersHorizontal
+              size={17}
+            />
+
             <span>Filtros</span>
           </button>
         </header>
 
         {error ? (
-          <div className="error-message" role="alert">
-            <strong>No pudimos cargar los artículos.</strong>
+          <div
+            className="error-message"
+            role="alert"
+          >
+            <strong>
+              No pudimos cargar los
+              artículos.
+            </strong>
+
             <span>{error}</span>
           </div>
         ) : cargando ? (
@@ -91,7 +151,9 @@ function Home() {
         ) : (
           <>
             <div className="results-header">
-              <h2>Publicaciones recientes</h2>
+              <h2>
+                Publicaciones recientes
+              </h2>
 
               <span>
                 {articulos.length}{" "}
@@ -105,12 +167,29 @@ function Home() {
               className="products-grid"
               aria-label="Publicaciones recientes"
             >
-              {articulos.map((articulo) => (
-                <ProductCard
-                  key={articulo.articulo_id}
-                  articulo={articulo}
-                />
-              ))}
+              {articulos.map(
+                (articulo) => {
+                  const articuloId =
+                    Number(
+                      articulo.articulo_id,
+                    );
+
+                  return (
+                    <ProductCard
+                      key={articuloId}
+                      articulo={articulo}
+                      inicialmenteGuardado={
+                        idsFavoritos.includes(
+                          articuloId,
+                        )
+                      }
+                      onSavedChange={
+                        manejarCambioGuardado
+                      }
+                    />
+                  );
+                },
+              )}
             </section>
           </>
         )}

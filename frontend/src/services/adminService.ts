@@ -66,9 +66,48 @@ export interface DatosCategoriaAdministracion {
   descripcion: string;
 }
 
+export interface EstadisticaMensualAdministracion {
+  periodo: string;
+  anio: number;
+  mes: number;
+  total: number;
+}
+
+export interface EstadisticaEstadoPublicacion {
+  estado: EstadoPublicacionAdministracion;
+  total: number;
+}
+
+export interface EstadisticaCategoriaAdministracion {
+  categoria_id: number;
+  categoria: string;
+  total: number;
+}
+
+export interface EstadisticasDashboardAdministracion {
+  usuarios_por_mes:
+    EstadisticaMensualAdministracion[];
+
+  publicaciones_por_mes:
+    EstadisticaMensualAdministracion[];
+
+  publicaciones_por_estado:
+    EstadisticaEstadoPublicacion[];
+
+  publicaciones_por_categoria:
+    EstadisticaCategoriaAdministracion[];
+}
+
 interface RespuestaResumen {
   ok: boolean;
   resumen?: ResumenAdministracion;
+  message?: string;
+}
+
+interface RespuestaEstadisticas {
+  ok: boolean;
+  estadisticas?:
+    EstadisticasDashboardAdministracion;
   message?: string;
 }
 
@@ -200,6 +239,23 @@ export async function obtenerResumenAdmin(): Promise<
   }
 
   return respuesta.resumen;
+}
+
+export async function obtenerEstadisticasAdmin(): Promise<
+  EstadisticasDashboardAdministracion
+> {
+  const respuesta =
+    await solicitarAdministracion<RespuestaEstadisticas>(
+      "estadisticas",
+    );
+
+  if (!respuesta.estadisticas) {
+    throw new Error(
+      "El servidor no devolvió las estadísticas administrativas",
+    );
+  }
+
+  return respuesta.estadisticas;
 }
 
 export async function obtenerUsuariosAdmin(): Promise<

@@ -10,6 +10,7 @@ import {
   cambiarEstadoUsuarioAdministracion,
   crearCategoriaAdministracion,
   obtenerCategoriasAdministracion,
+  obtenerEstadisticasDashboardAdministracion,
   obtenerPublicacionesAdministracion,
   obtenerResumenAdministracion,
   obtenerUsuariosAdministracion,
@@ -79,6 +80,32 @@ export async function obtenerResumenAdmin(
       ok: false,
       message:
         "No se pudo obtener el resumen administrativo",
+    });
+  }
+}
+
+export async function obtenerEstadisticasDashboardAdmin(
+  _request: Request,
+  response: Response,
+): Promise<void> {
+  try {
+    const estadisticas =
+      await obtenerEstadisticasDashboardAdministracion();
+
+    response.status(200).json({
+      ok: true,
+      estadisticas,
+    });
+  } catch (errorDesconocido) {
+    console.error(
+      "Error al obtener las estadísticas administrativas:",
+      errorDesconocido,
+    );
+
+    response.status(500).json({
+      ok: false,
+      message:
+        "No se pudieron obtener las estadísticas administrativas",
     });
   }
 }

@@ -6,52 +6,39 @@ import {
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import type { Articulo } from "../interfaces/articulo";
+import type {
+  Articulo,
+} from "../interfaces/articulo";
 
-const CLAVE_GUARDADOS = "reusa-articulos-guardados";
+import {
+  guardarFavorito,
+  quitarFavorito,
+} from "../services/favoritoService";
 
 interface ProductCardProps {
   articulo: Articulo;
+  inicialmenteGuardado?: boolean;
   onSavedChange?: (
     articuloId: number,
     guardado: boolean,
   ) => void;
 }
 
-function obtenerIdsGuardados(): number[] {
-  try {
-    const valorGuardado = localStorage.getItem(CLAVE_GUARDADOS);
-
-    if (!valorGuardado) {
-      return [];
-    }
-
-    const resultado = JSON.parse(valorGuardado) as unknown;
-
-    if (!Array.isArray(resultado)) {
-      return [];
-    }
-
-    return resultado.map(Number);
-  } catch {
-    return [];
-  }
-}
-
 function ProductCard({
   articulo,
+  inicialmenteGuardado = false,
   onSavedChange,
 }: ProductCardProps) {
   const navigate = useNavigate();
 
-const [guardado, setGuardado] = useState(() => {
-  const idsGuardados = obtenerIdsGuardados();
+  const [guardado, setGuardado] =
+    useState(inicialmenteGuardado);
 
-  return idsGuardados.includes(
-    Number(articulo.articulo_id),
-  );
-});
-  
+  const [procesandoGuardado, setProcesandoGuardado] =
+    useState(false);
+
+  const [errorGuardado, setErrorGuardado] =
+    useState("");
 
   const precioFormateado = Number(
     articulo.precio,
@@ -61,30 +48,75 @@ const [guardado, setGuardado] = useState(() => {
     maximumFractionDigits: 0,
   });
 
-  function abrirDetalle() {
-    navigate(`/producto/${articulo.articulo_id}`);
+  function abrirDetalle(): void {
+    navigate(
+      `/producto/${articulo.articulo_id}`,
+    );
   }
 
-  function alternarGuardado() {
-    const articuloId = Number(articulo.articulo_id);
-    const idsGuardados = obtenerIdsGuardados();
+  async function alternarGuardado(): Promise<void> {
+    if (procesandoGuardado) {
+      return;
+    }
 
-    const yaEstaGuardado =
-      idsGuardados.includes(articuloId);
-
-    const nuevosIds = yaEstaGuardado
-      ? idsGuardados.filter((id) => id !== articuloId)
-      : [...idsGuardados, articuloId];
-
-    localStorage.setItem(
-      CLAVE_GUARDADOS,
-      JSON.stringify(nuevosIds),
+    const articuloId = Number(
+      articulo.articulo_id,
     );
 
-    const nuevoEstado = !yaEstaGuardado;
+    if (
+      !Number.isInteger(articuloId) ||
+      articuloId <= 0
+    ) {
+      setErrorGuardado(
+        "El artículo no es válido",
+      );
 
-    setGuardado(nuevoEstado);
-    onSavedChange?.(articuloId, nuevoEstado);
+      return;
+    }
+
+    try {
+      setProcesandoGuardado(true);
+      setErrorGuardado("");
+
+      if (guardado) {
+        await quitarFavorito(
+          articuloId,
+        );
+      } else {
+        await guardarFavorito(
+          articuloId,
+        );
+      }
+
+      const nuevoEstado = !guardado;
+
+      setGuardado(nuevoEstado);
+
+      onSavedChange?.(
+        articuloId,
+        nuevoEstado,
+      );
+    } catch (errorDesconocido) {
+      const mensaje =
+        errorDesconocido instanceof Error
+          ? errorDesconocido.message
+          : "No se pudo actualizar el artículo guardado";
+
+      setErrorGuardado(mensaje);
+
+      if (
+        mensaje.includes(
+          "iniciar sesión",
+        ) ||
+        mensaje.includes(
+          "sesión guardada",
+        )
+      ) {
+        navigate("/login");
+      }
+    } finally {
+      setProcesandoGuardado(false);
+    }
   }
 
   return (
@@ -113,6 +145,7 @@ const [guardado, setGuardado] = useState(() => {
               : "product-card__favorite"
           }
           type="button"
+          disabled={procesandoGuardado}
           aria-label={
             guardado
               ? `Quitar ${articulo.titulo} de guardados`
@@ -123,11 +156,17 @@ const [guardado, setGuardado] = useState(() => {
               ? "Quitar de guardados"
               : "Guardar artículo"
           }
-          onClick={alternarGuardado}
+          onClick={() =>
+            void alternarGuardado()
+          }
         >
           <Heart
             size={18}
-            fill={guardado ? "currentColor" : "none"}
+            fill={
+              guardado
+                ? "currentColor"
+                : "none"
+            }
           />
         </button>
       </div>
@@ -154,6 +193,15 @@ const [guardado, setGuardado] = useState(() => {
           </span>
         </div>
 
+        {errorGuardado && (
+          <p
+            className="product-card__favorite-error"
+            role="alert"
+          >
+            {errorGuardado}
+          </p>
+        )}
+
         <div className="product-card__footer">
           <div className="product-card__seller">
             <span className="product-card__seller-avatar">
@@ -161,7 +209,8 @@ const [guardado, setGuardado] = useState(() => {
             </span>
 
             <span>
-              {articulo.vendedor ?? "Vendedor"}
+              {articulo.vendedor ??
+                "Vendedor"}
             </span>
           </div>
 

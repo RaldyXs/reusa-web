@@ -1,4 +1,5 @@
 import type {
+  EstadisticasDashboardAdministracion,
   PublicacionAdministracion,
   ResumenAdministracion,
   UsuarioAdministracion,
@@ -15,9 +16,13 @@ import {
   obtenerCategoriasAdministracionDesdeBaseDeDatos,
   obtenerPublicacionAdministracionPorIdDesdeBaseDeDatos,
   obtenerPublicacionesAdministracionDesdeBaseDeDatos,
+  obtenerPublicacionesPorCategoriaDesdeBaseDeDatos,
+  obtenerPublicacionesPorEstadoDesdeBaseDeDatos,
+  obtenerPublicacionesPorMesDesdeBaseDeDatos,
   obtenerResumenAdministracionDesdeBaseDeDatos,
   obtenerUsuarioAdministracionPorIdDesdeBaseDeDatos,
   obtenerUsuariosAdministracionDesdeBaseDeDatos,
+  obtenerUsuariosPorMesDesdeBaseDeDatos,
   type CategoriaAdministracion,
 } from "../repositories/admin.repository.js";
 
@@ -96,6 +101,32 @@ export async function obtenerResumenAdministracion(): Promise<
   ResumenAdministracion
 > {
   return obtenerResumenAdministracionDesdeBaseDeDatos();
+}
+
+export async function obtenerEstadisticasDashboardAdministracion(): Promise<
+  EstadisticasDashboardAdministracion
+> {
+  const [
+    usuariosPorMes,
+    publicacionesPorMes,
+    publicacionesPorEstado,
+    publicacionesPorCategoria,
+  ] = await Promise.all([
+    obtenerUsuariosPorMesDesdeBaseDeDatos(),
+    obtenerPublicacionesPorMesDesdeBaseDeDatos(),
+    obtenerPublicacionesPorEstadoDesdeBaseDeDatos(),
+    obtenerPublicacionesPorCategoriaDesdeBaseDeDatos(),
+  ]);
+
+  return {
+    usuarios_por_mes: usuariosPorMes,
+    publicaciones_por_mes:
+      publicacionesPorMes,
+    publicaciones_por_estado:
+      publicacionesPorEstado,
+    publicaciones_por_categoria:
+      publicacionesPorCategoria,
+  };
 }
 
 export async function obtenerUsuariosAdministracion(): Promise<

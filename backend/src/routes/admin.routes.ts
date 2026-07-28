@@ -7,6 +7,7 @@ import {
   cambiarEstadoUsuarioAdmin,
   crearCategoriaAdmin,
   obtenerCategoriasAdmin,
+  obtenerEstadisticasDashboardAdmin,
   obtenerPublicacionesAdmin,
   obtenerResumenAdmin,
   obtenerUsuariosAdmin,
@@ -27,6 +28,11 @@ adminRouter.use(
 adminRouter.get(
   "/resumen",
   obtenerResumenAdmin,
+);
+
+adminRouter.get(
+  "/estadisticas",
+  obtenerEstadisticasDashboardAdmin,
 );
 
 adminRouter.get(

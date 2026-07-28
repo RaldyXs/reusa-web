@@ -6,6 +6,9 @@ import {
 import { pool } from "../config/database.js";
 
 import type {
+  EstadisticaCategoriaAdministracion,
+  EstadisticaEstadoPublicacion,
+  EstadisticaMensualAdministracion,
   PublicacionAdministracion,
   ResumenAdministracion,
   UsuarioAdministracion,
@@ -430,4 +433,160 @@ export async function actualizarEstadoCategoriaAdministracionDesdeBaseDeDatos(
     );
 
   return resultado.affectedRows > 0;
+}
+
+export async function obtenerUsuariosPorMesDesdeBaseDeDatos(): Promise<
+  EstadisticaMensualAdministracion[]
+> {
+  const [filas] =
+    await pool.execute<
+      EstadisticaMensualAdministracion[]
+    >(
+      `
+        SELECT
+          DATE_FORMAT(
+            fecha_registro,
+            '%Y-%m'
+          ) AS periodo,
+          YEAR(fecha_registro) AS anio,
+          MONTH(fecha_registro) AS mes,
+          COUNT(*) AS total
+        FROM usuarios
+        WHERE fecha_registro >=
+          DATE_SUB(
+            DATE_FORMAT(
+              CURRENT_DATE,
+              '%Y-%m-01'
+            ),
+            INTERVAL 11 MONTH
+          )
+        GROUP BY
+          YEAR(fecha_registro),
+          MONTH(fecha_registro),
+          DATE_FORMAT(
+            fecha_registro,
+            '%Y-%m'
+          )
+        ORDER BY
+          anio ASC,
+          mes ASC
+      `,
+    );
+
+  return filas;
+}
+
+export async function obtenerPublicacionesPorMesDesdeBaseDeDatos(): Promise<
+  EstadisticaMensualAdministracion[]
+> {
+  const [filas] =
+    await pool.execute<
+      EstadisticaMensualAdministracion[]
+    >(
+      `
+        SELECT
+          DATE_FORMAT(
+            fecha_publicacion,
+            '%Y-%m'
+          ) AS periodo,
+          YEAR(fecha_publicacion) AS anio,
+          MONTH(fecha_publicacion) AS mes,
+          COUNT(*) AS total
+        FROM articulos
+        WHERE fecha_publicacion >=
+          DATE_SUB(
+            DATE_FORMAT(
+              CURRENT_DATE,
+              '%Y-%m-01'
+            ),
+            INTERVAL 11 MONTH
+          )
+        GROUP BY
+          YEAR(fecha_publicacion),
+          MONTH(fecha_publicacion),
+          DATE_FORMAT(
+            fecha_publicacion,
+            '%Y-%m'
+          )
+        ORDER BY
+          anio ASC,
+          mes ASC
+      `,
+    );
+
+  return filas;
+}
+
+export async function obtenerPublicacionesPorEstadoDesdeBaseDeDatos(): Promise<
+  EstadisticaEstadoPublicacion[]
+> {
+  const [filas] =
+    await pool.execute<
+      EstadisticaEstadoPublicacion[]
+    >(
+      `
+        SELECT
+          estado,
+          total
+        FROM (
+          SELECT
+            CASE
+              WHEN estado = 'archivado'
+                OR archivado = 1
+                THEN 'archivado'
+              WHEN estado = 'vendido'
+                THEN 'vendido'
+              ELSE 'activo'
+            END AS estado,
+            COUNT(*) AS total
+          FROM articulos
+          GROUP BY
+            CASE
+              WHEN estado = 'archivado'
+                OR archivado = 1
+                THEN 'archivado'
+              WHEN estado = 'vendido'
+                THEN 'vendido'
+              ELSE 'activo'
+            END
+        ) AS estadisticas
+        ORDER BY
+          FIELD(
+            estado,
+            'activo',
+            'vendido',
+            'archivado'
+          )
+      `,
+    );
+
+  return filas;
+}
+
+export async function obtenerPublicacionesPorCategoriaDesdeBaseDeDatos(): Promise<
+  EstadisticaCategoriaAdministracion[]
+> {
+  const [filas] =
+    await pool.execute<
+      EstadisticaCategoriaAdministracion[]
+    >(
+      `
+        SELECT
+          c.categoria_id,
+          c.nombre AS categoria,
+          COUNT(a.articulo_id) AS total
+        FROM categorias AS c
+        LEFT JOIN articulos AS a
+          ON a.categoria_id =
+            c.categoria_id
+        GROUP BY
+          c.categoria_id,
+          c.nombre
+        ORDER BY
+          total DESC,
+          c.nombre ASC
+      `,
+    );
+
+  return filas;
 }

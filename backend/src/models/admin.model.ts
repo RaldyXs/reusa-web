@@ -50,3 +50,41 @@ export interface PublicacionAdministracion
   vendedor_nombre: string;
   vendedor_email: string;
 }
+
+export interface EstadisticaMensualAdministracion
+  extends RowDataPacket {
+  periodo: string;
+  anio: number;
+  mes: number;
+  total: number;
+}
+
+export interface EstadisticaEstadoPublicacion
+  extends RowDataPacket {
+  estado:
+    | "activo"
+    | "vendido"
+    | "archivado";
+  total: number;
+}
+
+export interface EstadisticaCategoriaAdministracion
+  extends RowDataPacket {
+  categoria_id: number;
+  categoria: string;
+  total: number;
+}
+
+export interface EstadisticasDashboardAdministracion {
+  usuarios_por_mes:
+    EstadisticaMensualAdministracion[];
+
+  publicaciones_por_mes:
+    EstadisticaMensualAdministracion[];
+
+  publicaciones_por_estado:
+    EstadisticaEstadoPublicacion[];
+
+  publicaciones_por_categoria:
+    EstadisticaCategoriaAdministracion[];
+}
