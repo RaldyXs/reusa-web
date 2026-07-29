@@ -1,11 +1,24 @@
-import { SlidersHorizontal } from "lucide-react";
-import { useEffect, useState } from "react";
+import {
+  SlidersHorizontal,
+  X,
+} from "lucide-react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
 import FeaturedPanel from "../components/FeaturedPanel";
 import ProductCard from "../components/ProductCard";
 import type { Articulo } from "../interfaces/articulo";
 import { obtenerArticulos } from "../services/articuloService";
 import { obtenerIdsFavoritos } from "../services/favoritoService";
+
+type CondicionFiltro =
+  | "todas"
+  | "nuevo"
+  | "reparado"
+  | "usado";
 
 function Home() {
   const [articulos, setArticulos] =
@@ -18,6 +31,32 @@ function Home() {
     useState(true);
 
   const [error, setError] =
+    useState("");
+
+  const [
+    mostrarFiltros,
+    setMostrarFiltros,
+  ] = useState(false);
+
+  const [
+    categoriaSeleccionada,
+    setCategoriaSeleccionada,
+  ] = useState("todas");
+
+  const [
+    condicionSeleccionada,
+    setCondicionSeleccionada,
+  ] = useState<CondicionFiltro>(
+    "todas",
+  );
+
+  const [precioMinimo, setPrecioMinimo] =
+    useState("");
+
+  const [precioMaximo, setPrecioMaximo] =
+    useState("");
+
+  const [ubicacion, setUbicacion] =
     useState("");
 
   useEffect(() => {
@@ -69,6 +108,122 @@ function Home() {
     };
   }, []);
 
+  const categorias = useMemo(() => {
+    const nombres = articulos
+      .map((articulo) =>
+        articulo.categoria?.trim(),
+      )
+      .filter(
+        (
+          categoria,
+        ): categoria is string =>
+          Boolean(categoria),
+      );
+
+    return Array.from(
+      new Set(nombres),
+    ).sort((categoriaA, categoriaB) =>
+      categoriaA.localeCompare(
+        categoriaB,
+        "es",
+      ),
+    );
+  }, [articulos]);
+
+  const articulosFiltrados =
+    useMemo(() => {
+      const minimo =
+        precioMinimo.trim() === ""
+          ? null
+          : Number(precioMinimo);
+
+      const maximo =
+        precioMaximo.trim() === ""
+          ? null
+          : Number(precioMaximo);
+
+      const ubicacionBuscada =
+        ubicacion
+          .trim()
+          .toLowerCase();
+
+      return articulos.filter(
+        (articulo) => {
+          const precio = Number(
+            articulo.precio,
+          );
+
+          const coincideCategoria =
+            categoriaSeleccionada ===
+              "todas" ||
+            articulo.categoria ===
+              categoriaSeleccionada;
+
+          const coincideCondicion =
+            condicionSeleccionada ===
+              "todas" ||
+            articulo.condicion ===
+              condicionSeleccionada;
+
+          const coincidePrecioMinimo =
+            minimo === null ||
+            (!Number.isNaN(minimo) &&
+              precio >= minimo);
+
+          const coincidePrecioMaximo =
+            maximo === null ||
+            (!Number.isNaN(maximo) &&
+              precio <= maximo);
+
+          const coincideUbicacion =
+            ubicacionBuscada === "" ||
+            articulo.ubicacion
+              ?.toLowerCase()
+              .includes(
+                ubicacionBuscada,
+              );
+
+          return (
+            coincideCategoria &&
+            coincideCondicion &&
+            coincidePrecioMinimo &&
+            coincidePrecioMaximo &&
+            coincideUbicacion
+          );
+        },
+      );
+    }, [
+      articulos,
+      categoriaSeleccionada,
+      condicionSeleccionada,
+      precioMinimo,
+      precioMaximo,
+      ubicacion,
+    ]);
+
+  const filtrosActivos =
+    categoriaSeleccionada !==
+      "todas" ||
+    condicionSeleccionada !==
+      "todas" ||
+    precioMinimo.trim() !== "" ||
+    precioMaximo.trim() !== "" ||
+    ubicacion.trim() !== "";
+
+  function limpiarFiltros(): void {
+    setCategoriaSeleccionada(
+      "todas",
+    );
+
+    setCondicionSeleccionada(
+      "todas",
+    );
+
+    setPrecioMinimo("");
+    setPrecioMaximo("");
+    setUbicacion("");
+  }
+
   function manejarCambioGuardado(
     articuloId: number,
     guardado: boolean,
@@ -118,15 +273,154 @@ function Home() {
           <button
             className="filter-button"
             type="button"
-            aria-label="Abrir filtros"
+            aria-expanded={
+              mostrarFiltros
+            }
+            onClick={() =>
+              setMostrarFiltros(
+                (estadoActual) =>
+                  !estadoActual,
+              )
+            }
           >
-            <SlidersHorizontal
-              size={17}
-            />
+            {mostrarFiltros ? (
+              <X size={17} />
+            ) : (
+              <SlidersHorizontal
+                size={17}
+              />
+            )}
 
-            <span>Filtros</span>
+            <span>
+              {mostrarFiltros
+                ? "Cerrar filtros"
+                : "Filtros"}
+            </span>
           </button>
         </header>
+
+        {mostrarFiltros && (
+          <section className="marketplace-filters">
+            <label>
+              Categoría
+
+              <select
+                value={
+                  categoriaSeleccionada
+                }
+                onChange={(evento) =>
+                  setCategoriaSeleccionada(
+                    evento.target.value,
+                  )
+                }
+              >
+                <option value="todas">
+                  Todas las categorías
+                </option>
+
+                {categorias.map(
+                  (categoria) => (
+                    <option
+                      key={categoria}
+                      value={categoria}
+                    >
+                      {categoria}
+                    </option>
+                  ),
+                )}
+              </select>
+            </label>
+
+            <label>
+              Condición
+
+              <select
+                value={
+                  condicionSeleccionada
+                }
+                onChange={(evento) =>
+                  setCondicionSeleccionada(
+                    evento.target
+                      .value as CondicionFiltro,
+                  )
+                }
+              >
+                <option value="todas">
+                  Todas
+                </option>
+
+                <option value="nuevo">
+                  Nuevo
+                </option>
+
+                <option value="reparado">
+                  Reparado
+                </option>
+
+                <option value="usado">
+                  Usado
+                </option>
+              </select>
+            </label>
+
+            <label>
+              Precio mínimo
+
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={precioMinimo}
+                placeholder="RD$ 0"
+                onChange={(evento) =>
+                  setPrecioMinimo(
+                    evento.target.value,
+                  )
+                }
+              />
+            </label>
+
+            <label>
+              Precio máximo
+
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={precioMaximo}
+                placeholder="Sin límite"
+                onChange={(evento) =>
+                  setPrecioMaximo(
+                    evento.target.value,
+                  )
+                }
+              />
+            </label>
+
+            <label>
+              Ubicación
+
+              <input
+                type="text"
+                value={ubicacion}
+                placeholder="Ej. Santo Domingo"
+                onChange={(evento) =>
+                  setUbicacion(
+                    evento.target.value,
+                  )
+                }
+              />
+            </label>
+
+            <button
+              type="button"
+              disabled={!filtrosActivos}
+              onClick={limpiarFiltros}
+            >
+              Limpiar filtros
+            </button>
+          </section>
+        )}
 
         {error ? (
           <div
@@ -156,41 +450,59 @@ function Home() {
               </h2>
 
               <span>
-                {articulos.length}{" "}
-                {articulos.length === 1
+                {articulosFiltrados.length}{" "}
+                {articulosFiltrados.length ===
+                1
                   ? "artículo"
                   : "artículos"}
               </span>
             </div>
 
-            <section
-              className="products-grid"
-              aria-label="Publicaciones recientes"
-            >
-              {articulos.map(
-                (articulo) => {
-                  const articuloId =
-                    Number(
-                      articulo.articulo_id,
-                    );
+            {articulosFiltrados.length ===
+            0 ? (
+              <div className="status-message">
+                <p>
+                  No encontramos artículos
+                  con esos filtros.
+                </p>
 
-                  return (
-                    <ProductCard
-                      key={articuloId}
-                      articulo={articulo}
-                      inicialmenteGuardado={
-                        idsFavoritos.includes(
-                          articuloId,
-                        )
-                      }
-                      onSavedChange={
-                        manejarCambioGuardado
-                      }
-                    />
-                  );
-                },
-              )}
-            </section>
+                <button
+                  type="button"
+                  onClick={limpiarFiltros}
+                >
+                  Limpiar filtros
+                </button>
+              </div>
+            ) : (
+              <section
+                className="products-grid"
+                aria-label="Publicaciones recientes"
+              >
+                {articulosFiltrados.map(
+                  (articulo) => {
+                    const articuloId =
+                      Number(
+                        articulo.articulo_id,
+                      );
+
+                    return (
+                      <ProductCard
+                        key={articuloId}
+                        articulo={articulo}
+                        inicialmenteGuardado={
+                          idsFavoritos.includes(
+                            articuloId,
+                          )
+                        }
+                        onSavedChange={
+                          manejarCambioGuardado
+                        }
+                      />
+                    );
+                  },
+                )}
+              </section>
+            )}
           </>
         )}
       </section>
