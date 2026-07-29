@@ -1,64 +1,245 @@
 import {
   CalendarDays,
   CircleDollarSign,
-  MoreVertical,
   Package,
   UserRound,
 } from "lucide-react";
-import { useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
 
-type EstadoVenta = "Completada" | "Pendiente" | "Cancelada";
+import {
+  obtenerOfertasRecibidas,
+  responderOferta,
+  type EstadoOferta,
+  type Oferta,
+} from "../services/ofertaService";
 
-interface Venta {
-  id: number;
-  producto: string;
-  comprador: string;
-  precio: number;
-  fecha: string;
-  estado: EstadoVenta;
+type FiltroEstado =
+  | "todos"
+  | EstadoOferta;
+
+function formatearPrecio(
+  precio: number | string,
+): string {
+  return Number(precio).toLocaleString(
+    "es-DO",
+    {
+      style: "currency",
+      currency: "DOP",
+      maximumFractionDigits: 0,
+    },
+  );
 }
 
-const ventasIniciales: Venta[] = [
-  {
-    id: 1,
-    producto: "Juego de comedor",
-    comprador: "María López",
-    precio: 12500,
-    fecha: "16 mayo 2026",
-    estado: "Completada",
-  },
-  {
-    id: 2,
-    producto: "iPhone 12",
-    comprador: "Pedro Ramírez",
-    precio: 22000,
-    fecha: "13 mayo 2026",
-    estado: "Pendiente",
-  },
-  {
-    id: 3,
-    producto: "Bicicleta montañera",
-    comprador: "Laura Gómez",
-    precio: 18500,
-    fecha: "7 mayo 2026",
-    estado: "Cancelada",
-  },
-];
+function formatearFecha(
+  fecha: string,
+): string {
+  const fechaOferta = new Date(fecha);
+
+  if (
+    Number.isNaN(
+      fechaOferta.getTime(),
+    )
+  ) {
+    return "Fecha no disponible";
+  }
+
+  return fechaOferta.toLocaleDateString(
+    "es-DO",
+    {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    },
+  );
+}
+
+function obtenerTextoEstado(
+  estado: EstadoOferta,
+): string {
+  const textos: Record<
+    EstadoOferta,
+    string
+  > = {
+    pendiente: "Pendiente",
+    aceptada: "Aceptada",
+    rechazada: "Rechazada",
+    contraoferta: "Contraoferta",
+  };
+
+  return textos[estado];
+}
 
 function SalesHistory() {
-  const [estadoSeleccionado, setEstadoSeleccionado] =
-    useState("todos");
+  const [
+    estadoSeleccionado,
+    setEstadoSeleccionado,
+  ] = useState<FiltroEstado>(
+    "todos",
+  );
 
-  const ventasFiltradas =
+  const [ofertas, setOfertas] =
+    useState<Oferta[]>([]);
+
+  const [cargando, setCargando] =
+    useState(true);
+
+  const [error, setError] =
+    useState("");
+
+  const [
+    ofertaProcesandoId,
+    setOfertaProcesandoId,
+  ] = useState<number | null>(null);
+
+  const cargarOfertas =
+    useCallback(async (): Promise<void> => {
+      try {
+        setCargando(true);
+        setError("");
+
+        const datos =
+          await obtenerOfertasRecibidas();
+
+        setOfertas(datos);
+      } catch (errorDesconocido) {
+        const mensaje =
+          errorDesconocido instanceof Error
+            ? errorDesconocido.message
+            : "No se pudieron cargar las ofertas recibidas";
+
+        setError(mensaje);
+        setOfertas([]);
+      } finally {
+        setCargando(false);
+      }
+    }, []);
+
+  useEffect(() => {
+    async function inicializar(): Promise<void> {
+      await cargarOfertas();
+    }
+
+    void inicializar();
+  }, [cargarOfertas]);
+
+  async function manejarRespuestaOferta(
+    ofertaId: number,
+    estado:
+      | "aceptada"
+      | "rechazada",
+  ): Promise<void> {
+    const mensajeConfirmacion =
+      estado === "aceptada"
+        ? "¿Deseas aceptar esta oferta? El artículo será marcado como vendido."
+        : "¿Deseas rechazar esta oferta?";
+
+    const confirmado =
+      window.confirm(
+        mensajeConfirmacion,
+      );
+
+    if (!confirmado) {
+      return;
+    }
+
+    try {
+      setOfertaProcesandoId(
+        ofertaId,
+      );
+
+      setError("");
+
+      await responderOferta(
+        ofertaId,
+        estado,
+      );
+
+      setOfertas(
+        (ofertasActuales) =>
+          ofertasActuales.map(
+            (oferta) => {
+              if (
+                oferta.oferta_id ===
+                ofertaId
+              ) {
+                return {
+                  ...oferta,
+                  estado,
+                };
+              }
+
+              if (
+                estado === "aceptada" &&
+                oferta.articulo_id ===
+                  ofertasActuales.find(
+                    (item) =>
+                      item.oferta_id ===
+                      ofertaId,
+                  )?.articulo_id &&
+                oferta.estado ===
+                  "pendiente"
+              ) {
+                return {
+                  ...oferta,
+                  estado:
+                    "rechazada",
+                };
+              }
+
+              return oferta;
+            },
+          ),
+      );
+    } catch (errorDesconocido) {
+      const mensaje =
+        errorDesconocido instanceof Error
+          ? errorDesconocido.message
+          : "No se pudo responder la oferta";
+
+      setError(mensaje);
+
+      await cargarOfertas();
+    } finally {
+      setOfertaProcesandoId(
+        null,
+      );
+    }
+  }
+
+  const ofertasFiltradas =
     estadoSeleccionado === "todos"
-      ? ventasIniciales
-      : ventasIniciales.filter(
-          (venta) => venta.estado === estadoSeleccionado,
+      ? ofertas
+      : ofertas.filter(
+          (oferta) =>
+            oferta.estado ===
+            estadoSeleccionado,
         );
 
-  const totalVendido = ventasIniciales
-    .filter((venta) => venta.estado === "Completada")
-    .reduce((total, venta) => total + venta.precio, 0);
+  const ofertasAceptadas =
+    ofertas.filter(
+      (oferta) =>
+        oferta.estado === "aceptada",
+    );
+
+  const totalVendido =
+    ofertasAceptadas.reduce(
+      (total, oferta) =>
+        total +
+        Number(
+          oferta.precio_ofertado,
+        ),
+      0,
+    );
+
+  const ofertasPendientes =
+    ofertas.filter(
+      (oferta) =>
+        oferta.estado === "pendiente",
+    ).length;
 
   return (
     <section className="history-page">
@@ -66,49 +247,72 @@ function SalesHistory() {
         <div>
           <span>Mi cuenta</span>
 
-          <h1>Historial de ventas</h1>
+          <h1>
+            Historial de ventas
+          </h1>
 
           <p>
-            Revisa tus ventas, compradores y estados de cada
-            operación.
+            Revisa las ofertas recibidas
+            y acepta o rechaza cada
+            propuesta.
           </p>
         </div>
 
         <div className="history-page__filters">
           <select
-            aria-label="Filtrar ventas por estado"
+            aria-label="Filtrar ofertas por estado"
             value={estadoSeleccionado}
-            onChange={(event) =>
-              setEstadoSeleccionado(event.target.value)
+            onChange={(evento) =>
+              setEstadoSeleccionado(
+                evento.target
+                  .value as FiltroEstado,
+              )
             }
           >
-            <option value="todos">Todos los estados</option>
-            <option value="Completada">Completada</option>
-            <option value="Pendiente">Pendiente</option>
-            <option value="Cancelada">Cancelada</option>
+            <option value="todos">
+              Todos los estados
+            </option>
+
+            <option value="pendiente">
+              Pendientes
+            </option>
+
+            <option value="aceptada">
+              Aceptadas
+            </option>
+
+            <option value="rechazada">
+              Rechazadas
+            </option>
+
+            <option value="contraoferta">
+              Contraofertas
+            </option>
           </select>
 
           <button type="button">
             <CalendarDays size={16} />
-            Últimos 30 días
+            Todas las fechas
           </button>
         </div>
       </header>
 
       <div className="sales-summary">
         <article>
-          <CircleDollarSign size={21} />
+          <CircleDollarSign
+            size={21}
+          />
 
           <div>
             <strong>
-              {totalVendido.toLocaleString("es-DO", {
-                style: "currency",
-                currency: "DOP",
-                maximumFractionDigits: 0,
-              })}
+              {formatearPrecio(
+                totalVendido,
+              )}
             </strong>
 
-            <span>Total vendido</span>
+            <span>
+              Total vendido
+            </span>
           </div>
         </article>
 
@@ -116,8 +320,13 @@ function SalesHistory() {
           <Package size={21} />
 
           <div>
-            <strong>{ventasIniciales.length}</strong>
-            <span>Operaciones</span>
+            <strong>
+              {ofertas.length}
+            </strong>
+
+            <span>
+              Ofertas recibidas
+            </span>
           </div>
         </article>
 
@@ -126,11 +335,7 @@ function SalesHistory() {
 
           <div>
             <strong>
-              {
-                ventasIniciales.filter(
-                  (venta) => venta.estado === "Pendiente",
-                ).length
-              }
+              {ofertasPendientes}
             </strong>
 
             <span>Pendientes</span>
@@ -138,79 +343,184 @@ function SalesHistory() {
         </article>
       </div>
 
-      <section className="history-card">
-        <div className="history-table history-table--sales">
-          <div className="history-table__row history-table__row--header">
-            <span>Producto</span>
-            <span>Comprador</span>
-            <span>Precio</span>
-            <span>Fecha</span>
-            <span>Estado</span>
-            <span>Acción</span>
+      {error && (
+        <div
+          className="error-message"
+          role="alert"
+        >
+          {error}
+        </div>
+      )}
+
+      {cargando ? (
+        <p className="status-message">
+          Cargando historial de ventas...
+        </p>
+      ) : (
+        <section className="history-card">
+          <div className="history-table history-table--sales">
+            <div className="history-table__row history-table__row--header">
+              <span>Producto</span>
+              <span>Comprador</span>
+              <span>Oferta</span>
+              <span>Fecha</span>
+              <span>Estado</span>
+              <span>Acción</span>
+            </div>
+
+            {ofertasFiltradas.map(
+              (oferta) => {
+                const procesando =
+                  ofertaProcesandoId ===
+                  oferta.oferta_id;
+
+                return (
+                  <article
+                    className="history-table__row"
+                    key={
+                      oferta.oferta_id
+                    }
+                  >
+                    <div className="history-product">
+                      <span className="history-product__image">
+                        {oferta.imagen_principal ? (
+                          <img
+                            src={
+                              oferta.imagen_principal
+                            }
+                            alt={
+                              oferta.articulo_titulo ??
+                              "Artículo"
+                            }
+                          />
+                        ) : (
+                          <Package
+                            size={20}
+                          />
+                        )}
+                      </span>
+
+                      <div>
+                        <strong>
+                          {oferta.articulo_titulo ??
+                            "Artículo"}
+                        </strong>
+
+                        <span>
+                          Oferta #
+                          {
+                            oferta.oferta_id
+                          }
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="history-buyer">
+                      <span className="history-buyer__avatar">
+                        <UserRound
+                          size={14}
+                        />
+                      </span>
+
+                      <div>
+                        <span>
+                          {oferta.comprador_nombre ??
+                            "Comprador"}
+                        </span>
+
+                        {oferta.comprador_email && (
+                          <small>
+                            {
+                              oferta.comprador_email
+                            }
+                          </small>
+                        )}
+                      </div>
+                    </div>
+
+                    <strong className="history-price">
+                      {formatearPrecio(
+                        oferta.precio_ofertado,
+                      )}
+                    </strong>
+
+                    <span>
+                      {formatearFecha(
+                        oferta.fecha_oferta,
+                      )}
+                    </span>
+
+                    <span
+                      className={`history-status history-status--${oferta.estado}`}
+                    >
+                      {obtenerTextoEstado(
+                        oferta.estado,
+                      )}
+                    </span>
+
+                    <div className="history-offer-actions">
+                      {oferta.estado ===
+                      "pendiente" ? (
+                        <>
+                          <button
+                            type="button"
+                            disabled={
+                              procesando
+                            }
+                            onClick={() =>
+                              void manejarRespuestaOferta(
+                                oferta.oferta_id,
+                                "aceptada",
+                              )
+                            }
+                          >
+                            {procesando
+                              ? "Procesando..."
+                              : "Aceptar"}
+                          </button>
+
+                          <button
+                            type="button"
+                            disabled={
+                              procesando
+                            }
+                            onClick={() =>
+                              void manejarRespuestaOferta(
+                                oferta.oferta_id,
+                                "rechazada",
+                              )
+                            }
+                          >
+                            Rechazar
+                          </button>
+                        </>
+                      ) : (
+                        <span>
+                          Respondida
+                        </span>
+                      )}
+                    </div>
+                  </article>
+                );
+              },
+            )}
           </div>
 
-          {ventasFiltradas.map((venta) => (
-            <article
-              className="history-table__row"
-              key={venta.id}
-            >
-              <div className="history-product">
-                <span className="history-product__image">
-                  <Package size={20} />
-                </span>
+          {ofertasFiltradas.length ===
+            0 && (
+            <p className="status-message">
+              No hay ofertas con ese
+              estado.
+            </p>
+          )}
 
-                <div>
-                  <strong>{venta.producto}</strong>
-                  <span>Venta #{venta.id}</span>
-                </div>
-              </div>
-
-              <div className="history-buyer">
-                <span className="history-buyer__avatar">
-                  <UserRound size={14} />
-                </span>
-
-                <span>{venta.comprador}</span>
-              </div>
-
-              <strong className="history-price">
-                {venta.precio.toLocaleString("es-DO", {
-                  style: "currency",
-                  currency: "DOP",
-                  maximumFractionDigits: 0,
-                })}
-              </strong>
-
-              <span>{venta.fecha}</span>
-
-              <span
-                className={`history-status history-status--${venta.estado.toLowerCase()}`}
-              >
-                {venta.estado}
-              </span>
-
-              <button
-                className="history-action"
-                type="button"
-                aria-label={`Opciones para ${venta.producto}`}
-              >
-                <MoreVertical size={18} />
-              </button>
-            </article>
-          ))}
-        </div>
-
-        {ventasFiltradas.length === 0 && (
-          <p className="status-message">
-            No hay ventas con ese estado.
-          </p>
-        )}
-
-        <footer className="history-card__footer">
-          Mostrando {ventasFiltradas.length} de{" "}
-          {ventasIniciales.length} ventas
-        </footer>
-      </section>
+          <footer className="history-card__footer">
+            Mostrando{" "}
+            {ofertasFiltradas.length} de{" "}
+            {ofertas.length} ofertas
+          </footer>
+        </section>
+      )}
     </section>
   );
 }

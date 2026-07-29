@@ -8,6 +8,7 @@ import articuloRouter from "./routes/articulo.routes.js";
 import authRouter from "./routes/auth.routes.js";
 import categoriaRouter from "./routes/categoria.routes.js";
 import favoritoRouter from "./routes/favorito.routes.js";
+import ofertaRouter from "./routes/oferta.routes.js";
 
 const app = express();
 
@@ -51,5 +52,6 @@ app.use("/api/articulos", articuloRouter);
 app.use("/api/categorias", categoriaRouter);
 app.use("/api/favoritos", favoritoRouter);
 app.use("/api/admin", adminRouter);
+app.use("/api/ofertas", ofertaRouter);
 
 export default app;

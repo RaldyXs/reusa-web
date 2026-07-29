@@ -1,20 +1,34 @@
 import {
   ArrowLeft,
   Bookmark,
+  CheckCircle2,
   MapPin,
   MessageSquare,
   Share2,
   Tag,
   UserRound,
+  X,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import {
+  useEffect,
+  useState,
+} from "react";
 import {
   useNavigate,
   useParams,
 } from "react-router-dom";
 
-import type { Articulo } from "../interfaces/articulo";
-import { obtenerArticuloPorId } from "../services/articuloService";
+import type {
+  Articulo,
+} from "../interfaces/articulo";
+
+import {
+  obtenerArticuloPorId,
+} from "../services/articuloService";
+
+import {
+  crearOferta,
+} from "../services/ofertaService";
 
 function ProductDetail() {
   const navigate = useNavigate();
@@ -23,11 +37,38 @@ function ProductDetail() {
   const [articulo, setArticulo] =
     useState<Articulo | null>(null);
 
-  const [imagenSeleccionada, setImagenSeleccionada] =
-    useState<string | null>(null);
+  const [
+    imagenSeleccionada,
+    setImagenSeleccionada,
+  ] = useState<string | null>(null);
 
-  const [cargando, setCargando] = useState(true);
-  const [error, setError] = useState("");
+  const [
+    mostrarFormularioOferta,
+    setMostrarFormularioOferta,
+  ] = useState(false);
+
+  const [precioOferta, setPrecioOferta] =
+    useState("");
+
+  const [mensajeOferta, setMensajeOferta] =
+    useState("");
+
+  const [
+    enviandoOferta,
+    setEnviandoOferta,
+  ] = useState(false);
+
+  const [ofertaEnviada, setOfertaEnviada] =
+    useState(false);
+
+  const [errorOferta, setErrorOferta] =
+    useState("");
+
+  const [cargando, setCargando] =
+    useState(true);
+
+  const [error, setError] =
+    useState("");
 
   useEffect(() => {
     let componenteActivo = true;
@@ -49,7 +90,9 @@ function ProductDetail() {
         }
 
         const datos =
-          await obtenerArticuloPorId(articuloId);
+          await obtenerArticuloPorId(
+            articuloId,
+          );
 
         if (!componenteActivo) {
           return;
@@ -61,6 +104,14 @@ function ProductDetail() {
           datos.imagenes?.[0] ??
             datos.imagen_principal ??
             null,
+        );
+
+        setPrecioOferta(
+          String(
+            Math.round(
+              Number(datos.precio),
+            ),
+          ),
         );
       } catch (errorDesconocido) {
         const mensaje =
@@ -87,6 +138,69 @@ function ProductDetail() {
     };
   }, [id]);
 
+  async function manejarEnvioOferta(
+    evento: React.FormEvent<HTMLFormElement>,
+  ): Promise<void> {
+    evento.preventDefault();
+
+    if (!articulo) {
+      return;
+    }
+
+    const articuloId = Number(
+      articulo.articulo_id,
+    );
+
+    const precioNumerico = Number(
+      precioOferta,
+    );
+
+    if (
+      !Number.isFinite(precioNumerico) ||
+      precioNumerico <= 0
+    ) {
+      setErrorOferta(
+        "Ingresa un precio válido mayor que cero",
+      );
+
+      return;
+    }
+
+    try {
+      setEnviandoOferta(true);
+      setErrorOferta("");
+
+      await crearOferta(
+        articuloId,
+        precioNumerico,
+        mensajeOferta,
+      );
+
+      setOfertaEnviada(true);
+      setMostrarFormularioOferta(false);
+    } catch (errorDesconocido) {
+      const mensaje =
+        errorDesconocido instanceof Error
+          ? errorDesconocido.message
+          : "No se pudo enviar la oferta";
+
+      setErrorOferta(mensaje);
+
+      if (
+        mensaje.toLowerCase().includes(
+          "iniciar sesión",
+        ) ||
+        mensaje.toLowerCase().includes(
+          "sesión",
+        )
+      ) {
+        navigate("/login");
+      }
+    } finally {
+      setEnviandoOferta(false);
+    }
+  }
+
   if (cargando) {
     return (
       <p className="status-message">
@@ -98,13 +212,20 @@ function ProductDetail() {
   if (error || !articulo) {
     return (
       <section className="product-detail-error">
-        <h1>No pudimos cargar el artículo</h1>
+        <h1>
+          No pudimos cargar el artículo
+        </h1>
 
-        <p>{error || "El artículo no existe."}</p>
+        <p>
+          {error ||
+            "El artículo no existe."}
+        </p>
 
         <button
           type="button"
-          onClick={() => navigate("/marketplace")}
+          onClick={() =>
+            navigate("/marketplace")
+          }
         >
           Volver al marketplace
         </button>
@@ -127,6 +248,10 @@ function ProductDetail() {
       : articulo.imagen_principal
         ? [articulo.imagen_principal]
         : [];
+
+  const articuloDisponible =
+    articulo.estado === "activo" &&
+    Number(articulo.archivado) !== 1;
 
   return (
     <section className="product-detail-page">
@@ -160,26 +285,35 @@ function ProductDetail() {
 
           {imagenes.length > 0 && (
             <div className="product-detail-thumbnails">
-              {imagenes.map((imagen, indice) => (
-                <button
-                  type="button"
-                  key={`${imagen}-${indice}`}
-                  className={
-                    imagenSeleccionada === imagen
-                      ? "product-detail-thumbnail product-detail-thumbnail--active"
-                      : "product-detail-thumbnail"
-                  }
-                  onClick={() =>
-                    setImagenSeleccionada(imagen)
-                  }
-                  aria-label={`Mostrar imagen ${indice + 1}`}
-                >
-                  <img
-                    src={imagen}
-                    alt={`${articulo.titulo} ${indice + 1}`}
-                  />
-                </button>
-              ))}
+              {imagenes.map(
+                (imagen, indice) => (
+                  <button
+                    type="button"
+                    key={`${imagen}-${indice}`}
+                    className={
+                      imagenSeleccionada ===
+                      imagen
+                        ? "product-detail-thumbnail product-detail-thumbnail--active"
+                        : "product-detail-thumbnail"
+                    }
+                    onClick={() =>
+                      setImagenSeleccionada(
+                        imagen,
+                      )
+                    }
+                    aria-label={`Mostrar imagen ${
+                      indice + 1
+                    }`}
+                  >
+                    <img
+                      src={imagen}
+                      alt={`${articulo.titulo} ${
+                        indice + 1
+                      }`}
+                    />
+                  </button>
+                ),
+              )}
             </div>
           )}
         </div>
@@ -204,13 +338,133 @@ function ProductDetail() {
             </span>
           </div>
 
-          <button
-            className="product-detail-contact"
-            type="button"
-          >
-            <MessageSquare size={18} />
-            Contactar al vendedor
-          </button>
+          {!articuloDisponible && (
+            <div
+              className="error-message"
+              role="status"
+            >
+              Este artículo ya no está
+              disponible.
+            </div>
+          )}
+
+          {ofertaEnviada && (
+            <div
+              className="success-message"
+              role="status"
+            >
+              <CheckCircle2 size={18} />
+
+              <span>
+                Tu oferta fue enviada
+                correctamente.
+              </span>
+            </div>
+          )}
+
+          {errorOferta && (
+            <div
+              className="error-message"
+              role="alert"
+            >
+              {errorOferta}
+            </div>
+          )}
+
+          {articuloDisponible &&
+            !ofertaEnviada && (
+              <button
+                className="product-detail-contact"
+                type="button"
+                onClick={() => {
+                  setErrorOferta("");
+                  setMostrarFormularioOferta(
+                    true,
+                  );
+                }}
+              >
+                <MessageSquare size={18} />
+                Hacer una oferta
+              </button>
+            )}
+
+          {mostrarFormularioOferta && (
+            <form
+              className="product-detail-offer-form"
+              onSubmit={(evento) =>
+                void manejarEnvioOferta(
+                  evento,
+                )
+              }
+            >
+              <div className="product-detail-offer-header">
+                <div>
+                  <span>
+                    Oferta por el artículo
+                  </span>
+
+                  <strong>
+                    {articulo.titulo}
+                  </strong>
+                </div>
+
+                <button
+                  type="button"
+                  aria-label="Cerrar formulario"
+                  onClick={() => {
+                    setMostrarFormularioOferta(
+                      false,
+                    );
+                    setErrorOferta("");
+                  }}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <label>
+                Precio ofertado
+
+                <input
+                  type="number"
+                  min="1"
+                  step="0.01"
+                  value={precioOferta}
+                  onChange={(evento) =>
+                    setPrecioOferta(
+                      evento.target.value,
+                    )
+                  }
+                  required
+                />
+              </label>
+
+              <label>
+                Mensaje opcional
+
+                <textarea
+                  value={mensajeOferta}
+                  onChange={(evento) =>
+                    setMensajeOferta(
+                      evento.target.value,
+                    )
+                  }
+                  maxLength={500}
+                  rows={4}
+                  placeholder="Escribe un mensaje para el vendedor"
+                />
+              </label>
+
+              <button
+                type="submit"
+                disabled={enviandoOferta}
+              >
+                {enviandoOferta
+                  ? "Enviando..."
+                  : "Enviar oferta"}
+              </button>
+            </form>
+          )}
 
           <div className="product-detail-secondary-actions">
             <button type="button">
@@ -230,12 +484,16 @@ function ProductDetail() {
             <dl>
               <div>
                 <dt>Condición</dt>
-                <dd>{articulo.condicion}</dd>
+                <dd>
+                  {articulo.condicion}
+                </dd>
               </div>
 
               <div>
                 <dt>Categoría</dt>
-                <dd>{articulo.categoria}</dd>
+                <dd>
+                  {articulo.categoria}
+                </dd>
               </div>
 
               <div>
@@ -243,6 +501,13 @@ function ProductDetail() {
                 <dd>
                   {articulo.ubicacion ??
                     "No indicada"}
+                </dd>
+              </div>
+
+              <div>
+                <dt>Estado</dt>
+                <dd>
+                  {articulo.estado}
                 </dd>
               </div>
             </dl>
@@ -266,7 +531,8 @@ function ProductDetail() {
               <span>Vendido por</span>
 
               <strong>
-                {articulo.vendedor ?? "Vendedor"}
+                {articulo.vendedor ??
+                  "Vendedor"}
               </strong>
             </div>
 
