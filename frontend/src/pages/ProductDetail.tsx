@@ -2,8 +2,11 @@ import {
   ArrowLeft,
   Bookmark,
   CheckCircle2,
+  Copy,
+  Mail,
   MapPin,
   MessageSquare,
+  Phone,
   Share2,
   Tag,
   UserRound,
@@ -25,6 +28,17 @@ import type {
 import {
   obtenerArticuloPorId,
 } from "../services/articuloService";
+
+import {
+  obtenerContactoVendedor,
+  type ContactoVendedor,
+} from "../services/contactoService";
+
+import {
+  guardarFavorito,
+  obtenerIdsFavoritos,
+  quitarFavorito,
+} from "../services/favoritoService";
 
 import {
   crearOferta,
@@ -64,6 +78,46 @@ function ProductDetail() {
   const [errorOferta, setErrorOferta] =
     useState("");
 
+  const [guardado, setGuardado] =
+    useState(false);
+
+  const [
+    procesandoGuardado,
+    setProcesandoGuardado,
+  ] = useState(false);
+
+  const [
+    errorGuardado,
+    setErrorGuardado,
+  ] = useState("");
+
+  const [
+    mensajeCompartido,
+    setMensajeCompartido,
+  ] = useState("");
+
+  const [
+    contactoVendedor,
+    setContactoVendedor,
+  ] = useState<ContactoVendedor | null>(
+    null,
+  );
+
+  const [
+    cargandoContacto,
+    setCargandoContacto,
+  ] = useState(false);
+
+  const [
+    errorContacto,
+    setErrorContacto,
+  ] = useState("");
+
+  const [
+    mensajeContacto,
+    setMensajeContacto,
+  ] = useState("");
+
   const [cargando, setCargando] =
     useState(true);
 
@@ -77,6 +131,10 @@ function ProductDetail() {
       try {
         setCargando(true);
         setError("");
+        setErrorGuardado("");
+        setContactoVendedor(null);
+        setErrorContacto("");
+        setMensajeContacto("");
 
         const articuloId = Number(id);
 
@@ -113,6 +171,25 @@ function ProductDetail() {
             ),
           ),
         );
+
+        try {
+          const idsFavoritos =
+            await obtenerIdsFavoritos();
+
+          if (componenteActivo) {
+            setGuardado(
+              idsFavoritos.includes(
+                Number(
+                  datos.articulo_id,
+                ),
+              ),
+            );
+          }
+        } catch {
+          if (componenteActivo) {
+            setGuardado(false);
+          }
+        }
       } catch (errorDesconocido) {
         const mensaje =
           errorDesconocido instanceof Error
@@ -123,6 +200,7 @@ function ProductDetail() {
           setError(mensaje);
           setArticulo(null);
           setImagenSeleccionada(null);
+          setGuardado(false);
         }
       } finally {
         if (componenteActivo) {
@@ -187,17 +265,182 @@ function ProductDetail() {
       setErrorOferta(mensaje);
 
       if (
-        mensaje.toLowerCase().includes(
-          "iniciar sesión",
-        ) ||
-        mensaje.toLowerCase().includes(
-          "sesión",
-        )
+        mensaje
+          .toLowerCase()
+          .includes("iniciar sesión") ||
+        mensaje
+          .toLowerCase()
+          .includes("sesión")
       ) {
         navigate("/login");
       }
     } finally {
       setEnviandoOferta(false);
+    }
+  }
+
+  async function alternarGuardado(): Promise<void> {
+    if (
+      !articulo ||
+      procesandoGuardado
+    ) {
+      return;
+    }
+
+    const articuloId = Number(
+      articulo.articulo_id,
+    );
+
+    if (
+      !Number.isInteger(articuloId) ||
+      articuloId <= 0
+    ) {
+      setErrorGuardado(
+        "El artículo no es válido",
+      );
+
+      return;
+    }
+
+    try {
+      setProcesandoGuardado(true);
+      setErrorGuardado("");
+
+      if (guardado) {
+        await quitarFavorito(
+          articuloId,
+        );
+
+        setGuardado(false);
+      } else {
+        await guardarFavorito(
+          articuloId,
+        );
+
+        setGuardado(true);
+      }
+    } catch (errorDesconocido) {
+      const mensaje =
+        errorDesconocido instanceof Error
+          ? errorDesconocido.message
+          : "No se pudo actualizar el artículo guardado";
+
+      setErrorGuardado(mensaje);
+
+      if (
+        mensaje
+          .toLowerCase()
+          .includes("iniciar sesión") ||
+        mensaje
+          .toLowerCase()
+          .includes("sesión")
+      ) {
+        navigate("/login");
+      }
+    } finally {
+      setProcesandoGuardado(false);
+    }
+  }
+
+  async function compartirProducto(): Promise<void> {
+    if (!articulo) {
+      return;
+    }
+
+    const url = window.location.href;
+
+    try {
+      setMensajeCompartido("");
+
+      if (navigator.share) {
+        await navigator.share({
+          title: articulo.titulo,
+          text: `Mira este artículo en Re-Usa: ${articulo.titulo}`,
+          url,
+        });
+
+        return;
+      }
+
+      await navigator.clipboard.writeText(
+        url,
+      );
+
+      setMensajeCompartido(
+        "Enlace copiado al portapapeles",
+      );
+    } catch (errorDesconocido) {
+      if (
+        errorDesconocido instanceof DOMException &&
+        errorDesconocido.name === "AbortError"
+      ) {
+        return;
+      }
+
+      setMensajeCompartido(
+        "No se pudo compartir el producto",
+      );
+    }
+  }
+
+  async function cargarContactoVendedor(): Promise<void> {
+    if (!articulo) {
+      return;
+    }
+
+    try {
+      setCargandoContacto(true);
+      setErrorContacto("");
+      setMensajeContacto("");
+
+      const contacto =
+        await obtenerContactoVendedor(
+          Number(
+            articulo.articulo_id,
+          ),
+        );
+
+      setContactoVendedor(contacto);
+    } catch (errorDesconocido) {
+      const mensaje =
+        errorDesconocido instanceof Error
+          ? errorDesconocido.message
+          : "No se pudo obtener el contacto del vendedor";
+
+      setErrorContacto(mensaje);
+
+      if (
+        mensaje
+          .toLowerCase()
+          .includes("iniciar sesión") ||
+        mensaje
+          .toLowerCase()
+          .includes("sesión")
+      ) {
+        navigate("/login");
+      }
+    } finally {
+      setCargandoContacto(false);
+    }
+  }
+
+  async function copiarCorreo(): Promise<void> {
+    if (!contactoVendedor) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(
+        contactoVendedor.email,
+      );
+
+      setMensajeContacto(
+        "Correo copiado al portapapeles",
+      );
+    } catch {
+      setMensajeContacto(
+        "No se pudo copiar el correo",
+      );
     }
   }
 
@@ -388,6 +631,120 @@ function ProductDetail() {
               </button>
             )}
 
+          <button
+            className="product-detail-contact"
+            type="button"
+            disabled={cargandoContacto}
+            onClick={() =>
+              void cargarContactoVendedor()
+            }
+          >
+            <UserRound size={18} />
+
+            {cargandoContacto
+              ? "Consultando contacto..."
+              : contactoVendedor
+                ? "Actualizar contacto"
+                : "Contactar al vendedor"}
+          </button>
+
+          {contactoVendedor && (
+            <section className="product-detail-card">
+              <div className="product-detail-offer-header">
+                <div>
+                  <span>
+                    Datos del vendedor
+                  </span>
+
+                  <strong>
+                    {
+                      contactoVendedor.vendedor
+                    }
+                  </strong>
+                </div>
+
+                <button
+                  type="button"
+                  aria-label="Cerrar datos de contacto"
+                  onClick={() => {
+                    setContactoVendedor(
+                      null,
+                    );
+                    setMensajeContacto("");
+                  }}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="product-detail-contact-data">
+                <div>
+                  <Mail size={17} />
+
+                  <a
+                    href={`mailto:${contactoVendedor.email}`}
+                  >
+                    {
+                      contactoVendedor.email
+                    }
+                  </a>
+
+                  <button
+                    type="button"
+                    aria-label="Copiar correo"
+                    onClick={() =>
+                      void copiarCorreo()
+                    }
+                  >
+                    <Copy size={16} />
+                  </button>
+                </div>
+
+                <div>
+                  <Phone size={17} />
+
+                  {contactoVendedor.telefono ? (
+                    <a
+                      href={`tel:${contactoVendedor.telefono}`}
+                    >
+                      {
+                        contactoVendedor.telefono
+                      }
+                    </a>
+                  ) : (
+                    <span>
+                      Teléfono no indicado
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {mensajeContacto && (
+                <div
+                  className="success-message"
+                  role="status"
+                >
+                  <CheckCircle2
+                    size={18}
+                  />
+
+                  <span>
+                    {mensajeContacto}
+                  </span>
+                </div>
+              )}
+            </section>
+          )}
+
+          {errorContacto && (
+            <div
+              className="error-message"
+              role="alert"
+            >
+              {errorContacto}
+            </div>
+          )}
+
           {mostrarFormularioOferta && (
             <form
               className="product-detail-offer-form"
@@ -467,16 +824,66 @@ function ProductDetail() {
           )}
 
           <div className="product-detail-secondary-actions">
-            <button type="button">
-              <Bookmark size={17} />
-              Guardar
+            <button
+              type="button"
+              disabled={procesandoGuardado}
+              className={
+                guardado
+                  ? "product-detail-save product-detail-save--active"
+                  : "product-detail-save"
+              }
+              onClick={() =>
+                void alternarGuardado()
+              }
+            >
+              <Bookmark
+                size={17}
+                fill={
+                  guardado
+                    ? "currentColor"
+                    : "none"
+                }
+              />
+
+              {procesandoGuardado
+                ? "Procesando..."
+                : guardado
+                  ? "Guardado"
+                  : "Guardar"}
             </button>
 
-            <button type="button">
+            <button
+              type="button"
+              onClick={() =>
+                void compartirProducto()
+              }
+            >
               <Share2 size={17} />
               Compartir
             </button>
           </div>
+
+          {errorGuardado && (
+            <div
+              className="error-message"
+              role="alert"
+            >
+              {errorGuardado}
+            </div>
+          )}
+
+          {mensajeCompartido && (
+            <div
+              className="success-message"
+              role="status"
+            >
+              <CheckCircle2 size={18} />
+
+              <span>
+                {mensajeCompartido}
+              </span>
+            </div>
+          )}
 
           <section className="product-detail-card">
             <h2>Detalles</h2>

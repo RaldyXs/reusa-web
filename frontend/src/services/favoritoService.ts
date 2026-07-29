@@ -2,15 +2,16 @@ import type {
   Articulo,
 } from "../interfaces/articulo";
 
-import type {
-  Sesion,
-} from "../interfaces/auth";
+import {
+  solicitarApi,
+} from "./apiService";
 
-const API_URL =
+const API_BASE_URL =
   import.meta.env.VITE_API_URL ??
   "http://localhost:3000/api";
 
-const CLAVE_SESION = "reusa_sesion";
+const API_URL =
+  `${API_BASE_URL}/favoritos`;
 
 export interface ArticuloFavorito
   extends Articulo {
@@ -44,83 +45,24 @@ interface RespuestaGenerica {
   message?: string;
 }
 
-function obtenerToken(): string {
-  const sesionGuardada =
-    localStorage.getItem(CLAVE_SESION);
-
-  if (!sesionGuardada) {
-    throw new Error(
-      "Debes iniciar sesión para usar favoritos",
-    );
-  }
-
-  try {
-    const sesion =
-      JSON.parse(sesionGuardada) as Sesion;
-
-    if (!sesion.token) {
-      throw new Error();
-    }
-
-    return sesion.token;
-  } catch {
-    throw new Error(
-      "La sesión guardada no es válida",
-    );
-  }
-}
-
-async function solicitarFavoritos<T>(
-  ruta = "",
-  opciones: RequestInit = {},
-): Promise<T> {
-  const headers = new Headers(
-    opciones.headers,
-  );
-
-  headers.set(
-    "Authorization",
-    `Bearer ${obtenerToken()}`,
-  );
-
-  if (
-    opciones.body !== undefined &&
-    !headers.has("Content-Type")
-  ) {
-    headers.set(
-      "Content-Type",
-      "application/json",
-    );
-  }
-
-  const response = await fetch(
-    `${API_URL}/favoritos${ruta}`,
-    {
-      ...opciones,
-      headers,
-    },
-  );
-
-  const datos = (await response.json()) as {
-    ok: boolean;
-    message?: string;
-  };
-
-  if (!response.ok || !datos.ok) {
-    throw new Error(
-      datos.message ??
-        "No se pudo completar la solicitud de favoritos",
-    );
-  }
-
-  return datos as T;
-}
-
 export async function obtenerFavoritos(): Promise<
   ArticuloFavorito[]
 > {
   const respuesta =
-    await solicitarFavoritos<RespuestaFavoritos>();
+    await solicitarApi<RespuestaFavoritos>(
+      API_URL,
+      {
+        method: "GET",
+      },
+      true,
+    );
+
+  if (!respuesta.ok) {
+    throw new Error(
+      respuesta.message ??
+        "No se pudieron obtener los favoritos",
+    );
+  }
 
   return Array.isArray(
     respuesta.favoritos,
@@ -133,14 +75,33 @@ export async function obtenerIdsFavoritos(): Promise<
   number[]
 > {
   const respuesta =
-    await solicitarFavoritos<RespuestaIdsFavoritos>(
-      "/ids",
+    await solicitarApi<RespuestaIdsFavoritos>(
+      `${API_URL}/ids`,
+      {
+        method: "GET",
+      },
+      true,
     );
+
+  if (!respuesta.ok) {
+    throw new Error(
+      respuesta.message ??
+        "No se pudieron obtener los favoritos",
+    );
+  }
 
   return Array.isArray(
     respuesta.favoritos,
   )
-    ? respuesta.favoritos.map(Number)
+    ? respuesta.favoritos
+        .map(Number)
+        .filter(
+          (articuloId) =>
+            Number.isInteger(
+              articuloId,
+            ) &&
+            articuloId > 0,
+        )
     : [];
 }
 
@@ -148,16 +109,21 @@ export async function guardarFavorito(
   articuloId: number,
 ): Promise<void> {
   const respuesta =
-    await solicitarFavoritos<RespuestaGuardarFavorito>(
-      `/${articuloId}`,
+    await solicitarApi<RespuestaGuardarFavorito>(
+      `${API_URL}/${articuloId}`,
       {
         method: "POST",
       },
+      true,
     );
 
-  if (!respuesta.favorito) {
+  if (
+    !respuesta.ok ||
+    !respuesta.favorito
+  ) {
     throw new Error(
-      "El servidor no devolvió el favorito creado",
+      respuesta.message ??
+        "No se pudo guardar el artículo",
     );
   }
 }
@@ -165,10 +131,19 @@ export async function guardarFavorito(
 export async function quitarFavorito(
   articuloId: number,
 ): Promise<void> {
-  await solicitarFavoritos<RespuestaGenerica>(
-    `/${articuloId}`,
-    {
-      method: "DELETE",
-    },
-  );
+  const respuesta =
+    await solicitarApi<RespuestaGenerica>(
+      `${API_URL}/${articuloId}`,
+      {
+        method: "DELETE",
+      },
+      true,
+    );
+
+  if (!respuesta.ok) {
+    throw new Error(
+      respuesta.message ??
+        "No se pudo quitar el artículo de guardados",
+    );
+  }
 }

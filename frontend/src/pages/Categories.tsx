@@ -1,143 +1,90 @@
 import {
-  BookOpen,
-  BriefcaseBusiness,
-  Car,
-  Dumbbell,
-  Gamepad2,
-  House,
-  Laptop,
-  Package,
-  PawPrint,
-  Shirt,
-  Smartphone,
-  Sofa,
-  Sparkles,
-  TabletSmartphone,
-  Wrench,
-  type LucideIcon,
+  Grid2X2,
+  PackageSearch,
 } from "lucide-react";
 import {
   useEffect,
+  useMemo,
   useState,
 } from "react";
-import { useNavigate } from "react-router-dom";
 
-interface Categoria {
-  categoria_id: number;
+import ProductCard from "../components/ProductCard";
+import type { Articulo } from "../interfaces/articulo";
+import { obtenerArticulos } from "../services/articuloService";
+import { obtenerIdsFavoritos } from "../services/favoritoService";
+
+interface CategoriaResumen {
   nombre: string;
-  descripcion: string | null;
-  activo: number;
-}
-
-interface RespuestaCategorias {
-  ok: boolean;
-  categorias?: Categoria[];
-  message?: string;
-}
-
-const API_URL =
-  import.meta.env.VITE_API_URL ??
-  "http://localhost:3000/api";
-
-const iconosPorCategoria: Record<
-  string,
-  LucideIcon
-> = {
-  vehiculos: Car,
-  vehiculo: Car,
-  propiedades: House,
-  propiedad: House,
-  celulares: Smartphone,
-  celular: Smartphone,
-  computadoras: Laptop,
-  computadora: Laptop,
-  electronica: TabletSmartphone,
-  videojuegos: Gamepad2,
-  videojuego: Gamepad2,
-  hogar: House,
-  muebles: Sofa,
-  mueble: Sofa,
-  moda: Shirt,
-  ropa: Shirt,
-  deportes: Dumbbell,
-  deporte: Dumbbell,
-  mascotas: PawPrint,
-  mascota: PawPrint,
-  herramientas: Wrench,
-  herramienta: Wrench,
-  empleos: BriefcaseBusiness,
-  empleo: BriefcaseBusiness,
-  servicios: Sparkles,
-  servicio: Sparkles,
-  libros: BookOpen,
-  libro: BookOpen,
-};
-
-function normalizarTexto(texto: string): string {
-  return texto
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .trim()
-    .toLowerCase();
-}
-
-function obtenerIconoCategoria(
-  nombre: string,
-): LucideIcon {
-  return (
-    iconosPorCategoria[
-      normalizarTexto(nombre)
-    ] ?? Package
-  );
+  cantidad: number;
 }
 
 function Categories() {
-  const navigate = useNavigate();
+  const [articulos, setArticulos] =
+    useState<Articulo[]>([]);
 
-  const [categorias, setCategorias] =
-    useState<Categoria[]>([]);
+  const [idsFavoritos, setIdsFavoritos] =
+    useState<number[]>([]);
+
+  const [
+    categoriaSeleccionada,
+    setCategoriaSeleccionada,
+  ] = useState<string | null>(null);
 
   const [cargando, setCargando] =
     useState(true);
 
-  const [error, setError] = useState("");
+  const [error, setError] =
+    useState("");
 
   useEffect(() => {
     let componenteActivo = true;
 
-    async function cargarCategorias(): Promise<void> {
+    async function cargarDatos() {
       try {
         setCargando(true);
         setError("");
 
-        const response = await fetch(
-          `${API_URL}/categorias`,
-        );
+        const articulosRecibidos =
+          await obtenerArticulos();
 
-        const datos =
-          (await response.json()) as RespuestaCategorias;
-
-        if (!response.ok || !datos.ok) {
-          throw new Error(
-            datos.message ??
-              "No se pudieron cargar las categorías",
+        const articulosDisponibles =
+          articulosRecibidos.filter(
+            (articulo) =>
+              articulo.estado ===
+                "activo" &&
+              Number(
+                articulo.archivado,
+              ) !== 1,
           );
+
+        let favoritos: number[] = [];
+
+        try {
+          favoritos =
+            await obtenerIdsFavoritos();
+        } catch {
+          favoritos = [];
         }
 
         if (componenteActivo) {
-          setCategorias(
-            Array.isArray(datos.categorias)
-              ? datos.categorias
-              : [],
+          setArticulos(
+            articulosDisponibles,
+          );
+
+          setIdsFavoritos(
+            favoritos,
           );
         }
       } catch (errorDesconocido) {
+        const mensaje =
+          errorDesconocido instanceof Error
+            ? errorDesconocido.message
+            : "No se pudieron cargar las categorías";
+
         if (componenteActivo) {
-          setError(
-            errorDesconocido instanceof Error
-              ? errorDesconocido.message
-              : "No se pudieron cargar las categorías",
-          );
+          setError(mensaje);
+          setArticulos([]);
+          setIdsFavoritos([]);
         }
       } finally {
         if (componenteActivo) {
@@ -146,150 +93,289 @@ function Categories() {
       }
     }
 
-    void cargarCategorias();
+    void cargarDatos();
 
     return () => {
       componenteActivo = false;
     };
   }, []);
 
-  function abrirCategoria(nombre: string): void {
-    const categoria =
-      encodeURIComponent(nombre);
+  const categorias = useMemo<
+    CategoriaResumen[]
+  >(() => {
+    const cantidades =
+      new Map<string, number>();
 
-    navigate(
-      `/marketplace?categoria=${categoria}`,
+    articulos.forEach(
+      (articulo) => {
+        const categoria =
+          articulo.categoria?.trim();
+
+        if (!categoria) {
+          return;
+        }
+
+        cantidades.set(
+          categoria,
+          (cantidades.get(
+            categoria,
+          ) ?? 0) + 1,
+        );
+      },
+    );
+
+    return Array.from(
+      cantidades.entries(),
+    )
+      .map(
+        ([nombre, cantidad]) => ({
+          nombre,
+          cantidad,
+        }),
+      )
+      .sort(
+        (
+          categoriaA,
+          categoriaB,
+        ) =>
+          categoriaA.nombre.localeCompare(
+            categoriaB.nombre,
+            "es",
+          ),
+      );
+  }, [articulos]);
+
+  const articulosCategoria =
+    useMemo(() => {
+      if (!categoriaSeleccionada) {
+        return [];
+      }
+
+      return articulos.filter(
+        (articulo) =>
+          articulo.categoria ===
+          categoriaSeleccionada,
+      );
+    }, [
+      articulos,
+      categoriaSeleccionada,
+    ]);
+
+  function manejarCambioGuardado(
+    articuloId: number,
+    guardado: boolean,
+  ): void {
+    setIdsFavoritos(
+      (idsActuales) => {
+        if (guardado) {
+          if (
+            idsActuales.includes(
+              articuloId,
+            )
+          ) {
+            return idsActuales;
+          }
+
+          return [
+            ...idsActuales,
+            articuloId,
+          ];
+        }
+
+        return idsActuales.filter(
+          (id) =>
+            id !== articuloId,
+        );
+      },
     );
   }
 
   return (
     <section className="categories-page">
       <header className="categories-page__header">
-        <span>Marketplace</span>
+        <div>
+          <span>Marketplace</span>
 
-        <h1>Explora las categorías</h1>
+          <h1>Categorías</h1>
 
-        <p>
-          Descubre artículos y servicios
-          publicados por nuestra comunidad.
-          Encuentra exactamente lo que estás
-          buscando.
-        </p>
+          <p>
+            Explora los artículos
+            disponibles por categoría.
+          </p>
+        </div>
+
+        <div className="categories-page__summary">
+          <Grid2X2 size={19} />
+
+          <span>
+            {categorias.length}{" "}
+            {categorias.length === 1
+              ? "categoría"
+              : "categorías"}
+          </span>
+        </div>
       </header>
 
-      {cargando && (
-        <div
-          className="categories-help"
-          role="status"
-        >
-          <div>
-            <span>Cargando</span>
-
-            <h2>
-              Cargando categorías...
-            </h2>
-
-            <p>
-              Estamos consultando las categorías
-              disponibles.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {error && (
+      {error ? (
         <div
           className="error-message"
           role="alert"
         >
           {error}
         </div>
-      )}
+      ) : cargando ? (
+        <p className="status-message">
+          Cargando categorías...
+        </p>
+      ) : categorias.length === 0 ? (
+        <div className="categories-page__empty">
+          <PackageSearch
+            size={36}
+          />
 
-      {!cargando &&
-        !error &&
-        categorias.length === 0 && (
-          <div className="categories-help">
-            <div>
-              <span>Marketplace</span>
+          <h2>
+            No hay categorías disponibles
+          </h2>
 
-              <h2>
-                No hay categorías disponibles
-              </h2>
-
-              <p>
-                Todavía no existen categorías
-                activas en el sistema.
-              </p>
-            </div>
-          </div>
-        )}
-
-      {!cargando &&
-        !error &&
-        categorias.length > 0 && (
-          <div
+          <p>
+            Todavía no existen artículos
+            activos para mostrar.
+          </p>
+        </div>
+      ) : (
+        <>
+          <section
             className="categories-grid"
-            aria-label="Categorías del marketplace"
+            aria-label="Categorías disponibles"
           >
-            {categorias.map((categoria) => {
-              const Icono =
-                obtenerIconoCategoria(
-                  categoria.nombre,
-                );
-
-              return (
+            {categorias.map(
+              (categoria) => (
                 <button
-                  key={categoria.categoria_id}
                   type="button"
-                  className="category-card"
+                  key={categoria.nombre}
+                  className={
+                    categoriaSeleccionada ===
+                    categoria.nombre
+                      ? "category-card category-card--active"
+                      : "category-card"
+                  }
                   onClick={() =>
-                    abrirCategoria(
+                    setCategoriaSeleccionada(
                       categoria.nombre,
                     )
                   }
                 >
                   <span className="category-card__icon">
-                    <Icono
-                      size={23}
-                      strokeWidth={1.8}
+                    <Grid2X2
+                      size={22}
                     />
                   </span>
 
                   <strong>
                     {categoria.nombre}
                   </strong>
+
+                  <span>
+                    {categoria.cantidad}{" "}
+                    {categoria.cantidad ===
+                    1
+                      ? "artículo"
+                      : "artículos"}
+                  </span>
                 </button>
-              );
-            })}
-          </div>
-        )}
+              ),
+            )}
+          </section>
 
-      <aside className="categories-help">
-        <div>
-          <span>Destacado</span>
+          {categoriaSeleccionada ? (
+            <section className="categories-results">
+              <header className="results-header">
+                <div>
+                  <h2>
+                    {
+                      categoriaSeleccionada
+                    }
+                  </h2>
 
-          <h2>
-            ¿No encuentras lo que estás
-            buscando?
-          </h2>
+                  <span>
+                    {
+                      articulosCategoria.length
+                    }{" "}
+                    {articulosCategoria.length ===
+                    1
+                      ? "artículo disponible"
+                      : "artículos disponibles"}
+                  </span>
+                </div>
 
-          <p>
-            Usa el buscador principal o explora
-            las publicaciones recientes del
-            marketplace.
-          </p>
-        </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setCategoriaSeleccionada(
+                      null,
+                    )
+                  }
+                >
+                  Ver todas
+                </button>
+              </header>
 
-        <button
-          type="button"
-          onClick={() =>
-            navigate("/marketplace")
-          }
-        >
-          Ver marketplace
-        </button>
-      </aside>
+              {articulosCategoria.length ===
+              0 ? (
+                <p className="status-message">
+                  No hay artículos
+                  disponibles en esta
+                  categoría.
+                </p>
+              ) : (
+                <section
+                  className="products-grid"
+                  aria-label={`Artículos de ${categoriaSeleccionada}`}
+                >
+                  {articulosCategoria.map(
+                    (articulo) => {
+                      const articuloId =
+                        Number(
+                          articulo.articulo_id,
+                        );
+
+                      return (
+                        <ProductCard
+                          key={
+                            articuloId
+                          }
+                          articulo={
+                            articulo
+                          }
+                          inicialmenteGuardado={
+                            idsFavoritos.includes(
+                              articuloId,
+                            )
+                          }
+                          onSavedChange={
+                            manejarCambioGuardado
+                          }
+                        />
+                      );
+                    },
+                  )}
+                </section>
+              )}
+            </section>
+          ) : (
+            <div className="categories-page__instruction">
+              <PackageSearch
+                size={28}
+              />
+
+              <p>
+                Selecciona una categoría
+                para ver sus artículos.
+              </p>
+            </div>
+          )}
+        </>
+      )}
     </section>
   );
 }

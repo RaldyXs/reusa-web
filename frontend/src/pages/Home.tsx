@@ -70,6 +70,16 @@ function Home() {
         const datos =
           await obtenerArticulos();
 
+        const articulosDisponibles =
+          datos.filter(
+            (articulo) =>
+              articulo.estado ===
+                "activo" &&
+              Number(
+                articulo.archivado,
+              ) !== 1,
+          );
+
         let favoritos: number[] = [];
 
         try {
@@ -80,7 +90,9 @@ function Home() {
         }
 
         if (componenteActivo) {
-          setArticulos(datos);
+          setArticulos(
+            articulosDisponibles,
+          );
           setIdsFavoritos(favoritos);
         }
       } catch (errorDesconocido) {

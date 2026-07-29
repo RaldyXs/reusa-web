@@ -12,6 +12,10 @@ import {
 } from "react";
 
 import {
+  actualizarUsuarioSesion,
+} from "../services/authService";
+
+import {
   actualizarPerfil,
   cambiarContrasena,
   obtenerPerfil,
@@ -142,6 +146,11 @@ function Settings() {
           apellido,
           telefono,
           ubicacion,
+        });
+
+        actualizarUsuarioSesion({
+          nombre: perfil.nombre,
+          apellido: perfil.apellido,
         });
 
       setNombre(perfil.nombre);

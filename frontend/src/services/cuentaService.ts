@@ -1,12 +1,14 @@
-import type {
-  Sesion,
-} from "../interfaces/auth";
 
-const API_URL =
+import {
+  solicitarApi,
+} from "./apiService";
+
+const API_BASE_URL =
   import.meta.env.VITE_API_URL ??
   "http://localhost:3000/api";
 
-const CLAVE_SESION = "reusa_sesion";
+const API_URL =
+  `${API_BASE_URL}/cuenta`;
 
 export interface PerfilUsuario {
   usuario_id: number;
@@ -44,89 +46,25 @@ interface RespuestaGenerica {
   message?: string;
 }
 
-function obtenerToken(): string {
-  const sesionGuardada =
-    localStorage.getItem(CLAVE_SESION);
-
-  if (!sesionGuardada) {
-    throw new Error(
-      "Debes iniciar sesión para acceder a tu cuenta",
-    );
-  }
-
-  try {
-    const sesion =
-      JSON.parse(sesionGuardada) as Sesion;
-
-    if (!sesion.token) {
-      throw new Error();
-    }
-
-    return sesion.token;
-  } catch {
-    throw new Error(
-      "La sesión guardada no es válida",
-    );
-  }
-}
-
-async function solicitarCuenta<T>(
-  ruta: string,
-  opciones: RequestInit = {},
-): Promise<T> {
-  const headers = new Headers(
-    opciones.headers,
-  );
-
-  headers.set(
-    "Authorization",
-    `Bearer ${obtenerToken()}`,
-  );
-
-  if (
-    opciones.body !== undefined &&
-    !headers.has("Content-Type")
-  ) {
-    headers.set(
-      "Content-Type",
-      "application/json",
-    );
-  }
-
-  const response = await fetch(
-    `${API_URL}/cuenta${ruta}`,
-    {
-      ...opciones,
-      headers,
-    },
-  );
-
-  const datos = (await response.json()) as {
-    ok: boolean;
-    message?: string;
-  };
-
-  if (!response.ok || !datos.ok) {
-    throw new Error(
-      datos.message ??
-        "No se pudo completar la solicitud",
-    );
-  }
-
-  return datos as T;
-}
-
 export async function obtenerPerfil(): Promise<
   PerfilUsuario
 > {
   const respuesta =
-    await solicitarCuenta<RespuestaPerfil>(
-      "/perfil",
+    await solicitarApi<RespuestaPerfil>(
+      `${API_URL}/perfil`,
+      {
+        method: "GET",
+      },
+      true,
     );
 
-  if (!respuesta.perfil) {
+  if (
+    !respuesta.ok ||
+    !respuesta.perfil
+  ) {
     throw new Error(
-      "El servidor no devolvió los datos del perfil",
+      respuesta.message ??
+        "El servidor no devolvió los datos del perfil",
     );
   }
 
@@ -137,17 +75,22 @@ export async function actualizarPerfil(
   datos: ActualizarPerfilDatos,
 ): Promise<PerfilUsuario> {
   const respuesta =
-    await solicitarCuenta<RespuestaPerfil>(
-      "/perfil",
+    await solicitarApi<RespuestaPerfil>(
+      `${API_URL}/perfil`,
       {
         method: "PUT",
         body: JSON.stringify(datos),
       },
+      true,
     );
 
-  if (!respuesta.perfil) {
+  if (
+    !respuesta.ok ||
+    !respuesta.perfil
+  ) {
     throw new Error(
-      "El servidor no devolvió el perfil actualizado",
+      respuesta.message ??
+        "El servidor no devolvió el perfil actualizado",
     );
   }
 
@@ -157,11 +100,20 @@ export async function actualizarPerfil(
 export async function cambiarContrasena(
   datos: CambiarContrasenaDatos,
 ): Promise<void> {
-  await solicitarCuenta<RespuestaGenerica>(
-    "/contrasena",
-    {
-      method: "PATCH",
-      body: JSON.stringify(datos),
-    },
-  );
+  const respuesta =
+    await solicitarApi<RespuestaGenerica>(
+      `${API_URL}/contrasena`,
+      {
+        method: "PATCH",
+        body: JSON.stringify(datos),
+      },
+      true,
+    );
+
+  if (!respuesta.ok) {
+    throw new Error(
+      respuesta.message ??
+        "No se pudo actualizar la contraseña",
+    );
+  }
 }

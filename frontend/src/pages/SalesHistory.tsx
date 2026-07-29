@@ -1,6 +1,7 @@
 import {
   CalendarDays,
   CircleDollarSign,
+  MessageSquareText,
   Package,
   UserRound,
 } from "lucide-react";
@@ -119,11 +120,8 @@ function SalesHistory() {
     }, []);
 
   useEffect(() => {
-    async function inicializar(): Promise<void> {
-      await cargarOfertas();
-    }
-
-    void inicializar();
+    // Defer callivamosng the async loader to avoid setting state synchronously within the effect
+    void Promise.resolve().then(() => cargarOfertas());
   }, [cargarOfertas]);
 
   async function manejarRespuestaOferta(
@@ -158,6 +156,13 @@ function SalesHistory() {
         estado,
       );
 
+      const ofertaRespondida =
+        ofertas.find(
+          (oferta) =>
+            oferta.oferta_id ===
+            ofertaId,
+        );
+
       setOfertas(
         (ofertasActuales) =>
           ofertasActuales.map(
@@ -174,12 +179,9 @@ function SalesHistory() {
 
               if (
                 estado === "aceptada" &&
+                ofertaRespondida &&
                 oferta.articulo_id ===
-                  ofertasActuales.find(
-                    (item) =>
-                      item.oferta_id ===
-                      ofertaId,
-                  )?.articulo_id &&
+                  ofertaRespondida.articulo_id &&
                 oferta.estado ===
                   "pendiente"
               ) {
@@ -252,8 +254,8 @@ function SalesHistory() {
           </h1>
 
           <p>
-            Revisa las ofertas recibidas
-            y acepta o rechaza cada
+            Revisa las ofertas recibidas,
+            sus mensajes y responde cada
             propuesta.
           </p>
         </div>
@@ -412,6 +414,17 @@ function SalesHistory() {
                             oferta.oferta_id
                           }
                         </span>
+
+                        <div className="history-offer-message">
+                          <MessageSquareText
+                            size={14}
+                          />
+
+                          <span>
+                            {oferta.mensaje?.trim() ||
+                              "El comprador no agregó un mensaje."}
+                          </span>
+                        </div>
                       </div>
                     </div>
 
