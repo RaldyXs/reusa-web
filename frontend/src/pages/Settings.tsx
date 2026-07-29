@@ -1,162 +1,215 @@
 import {
-  Bell,
-  Eye,
-  EyeOff,
-  LockKeyhole,
-  Mail,
+  CheckCircle2,
+  KeyRound,
   MapPin,
+  Phone,
   Save,
-  ShieldCheck,
   UserRound,
 } from "lucide-react";
 import {
-  type ChangeEvent,
-  type FormEvent,
+  useEffect,
   useState,
 } from "react";
 
-interface DatosPerfil {
-  nombre: string;
-  apellido: string;
-  correo: string;
-  telefono: string;
-  ubicacion: string;
-}
-
-interface DatosContrasena {
-  actual: string;
-  nueva: string;
-  confirmar: string;
-}
-
-const CLAVE_CONFIGURACION = "reusa-configuracion-usuario";
-
-function obtenerConfiguracionInicial(): DatosPerfil {
-  const datosPredeterminados: DatosPerfil = {
-    nombre: "Usuario",
-    apellido: "Re-Usa",
-    correo: "usuario@reusa.com",
-    telefono: "809-555-0100",
-    ubicacion: "Santo Domingo",
-  };
-
-  try {
-    const valorGuardado = localStorage.getItem(
-      CLAVE_CONFIGURACION,
-    );
-
-    if (!valorGuardado) {
-      return datosPredeterminados;
-    }
-
-    return {
-      ...datosPredeterminados,
-      ...(JSON.parse(valorGuardado) as Partial<DatosPerfil>),
-    };
-  } catch {
-    return datosPredeterminados;
-  }
-}
+import {
+  actualizarPerfil,
+  cambiarContrasena,
+  obtenerPerfil,
+} from "../services/cuentaService";
 
 function Settings() {
-  const [perfil, setPerfil] = useState<DatosPerfil>(
-    obtenerConfiguracionInicial,
-  );
-
-  const [contrasenas, setContrasenas] =
-    useState<DatosContrasena>({
-      actual: "",
-      nueva: "",
-      confirmar: "",
-    });
-
-  const [mostrarContrasenas, setMostrarContrasenas] =
-    useState(false);
-
-  const [notificaciones, setNotificaciones] = useState({
-    mensajes: true,
-    ofertas: true,
-    novedades: false,
-  });
-
-  const [mensajePerfil, setMensajePerfil] = useState("");
-  const [mensajeContrasena, setMensajeContrasena] =
+  const [nombre, setNombre] =
     useState("");
 
-  function manejarCambioPerfil(
-    event: ChangeEvent<HTMLInputElement>,
-  ) {
-    const { name, value } = event.target;
+  const [apellido, setApellido] =
+    useState("");
 
-    setPerfil((datosActuales) => ({
-      ...datosActuales,
-      [name]: value,
-    }));
-  }
+  const [email, setEmail] =
+    useState("");
 
-  function guardarPerfil(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  const [telefono, setTelefono] =
+    useState("");
 
-    localStorage.setItem(
-      CLAVE_CONFIGURACION,
-      JSON.stringify(perfil),
-    );
+  const [ubicacion, setUbicacion] =
+    useState("");
 
-    setMensajePerfil("Los datos del perfil fueron guardados.");
-  }
+  const [
+    contrasenaActual,
+    setContrasenaActual,
+  ] = useState("");
 
-  function manejarCambioContrasena(
-    event: ChangeEvent<HTMLInputElement>,
-  ) {
-    const { name, value } = event.target;
+  const [
+    nuevaContrasena,
+    setNuevaContrasena,
+  ] = useState("");
 
-    setContrasenas((datosActuales) => ({
-      ...datosActuales,
-      [name]: value,
-    }));
-  }
+  const [
+    confirmarContrasena,
+    setConfirmarContrasena,
+  ] = useState("");
 
-  function guardarContrasena(
-    event: FormEvent<HTMLFormElement>,
-  ) {
-    event.preventDefault();
-    setMensajeContrasena("");
+  const [cargando, setCargando] =
+    useState(true);
 
-    if (
-      !contrasenas.actual ||
-      !contrasenas.nueva ||
-      !contrasenas.confirmar
-    ) {
-      setMensajeContrasena(
-        "Completa todos los campos de contraseña.",
-      );
-      return;
+  const [
+    guardandoPerfil,
+    setGuardandoPerfil,
+  ] = useState(false);
+
+  const [
+    guardandoContrasena,
+    setGuardandoContrasena,
+  ] = useState(false);
+
+  const [errorPerfil, setErrorPerfil] =
+    useState("");
+
+  const [
+    mensajePerfil,
+    setMensajePerfil,
+  ] = useState("");
+
+  const [
+    errorContrasena,
+    setErrorContrasena,
+  ] = useState("");
+
+  const [
+    mensajeContrasena,
+    setMensajeContrasena,
+  ] = useState("");
+
+  useEffect(() => {
+    let componenteActivo = true;
+
+    async function cargarPerfil() {
+      try {
+        setCargando(true);
+        setErrorPerfil("");
+
+        const perfil =
+          await obtenerPerfil();
+
+        if (!componenteActivo) {
+          return;
+        }
+
+        setNombre(perfil.nombre);
+        setApellido(perfil.apellido);
+        setEmail(perfil.email);
+        setTelefono(
+          perfil.telefono ?? "",
+        );
+        setUbicacion(
+          perfil.ubicacion ?? "",
+        );
+      } catch (errorDesconocido) {
+        const mensaje =
+          errorDesconocido instanceof Error
+            ? errorDesconocido.message
+            : "No se pudo cargar el perfil";
+
+        if (componenteActivo) {
+          setErrorPerfil(mensaje);
+        }
+      } finally {
+        if (componenteActivo) {
+          setCargando(false);
+        }
+      }
     }
 
-    if (contrasenas.nueva.length < 6) {
-      setMensajeContrasena(
-        "La nueva contraseña debe tener al menos 6 caracteres.",
+    void cargarPerfil();
+
+    return () => {
+      componenteActivo = false;
+    };
+  }, []);
+
+  async function manejarActualizacionPerfil(
+    evento: React.FormEvent<HTMLFormElement>,
+  ): Promise<void> {
+    evento.preventDefault();
+
+    try {
+      setGuardandoPerfil(true);
+      setErrorPerfil("");
+      setMensajePerfil("");
+
+      const perfil =
+        await actualizarPerfil({
+          nombre,
+          apellido,
+          telefono,
+          ubicacion,
+        });
+
+      setNombre(perfil.nombre);
+      setApellido(perfil.apellido);
+      setTelefono(
+        perfil.telefono ?? "",
       );
-      return;
-    }
-
-    if (
-      contrasenas.nueva !== contrasenas.confirmar
-    ) {
-      setMensajeContrasena(
-        "Las nuevas contraseñas no coinciden.",
+      setUbicacion(
+        perfil.ubicacion ?? "",
       );
-      return;
+
+      setMensajePerfil(
+        "Perfil actualizado correctamente",
+      );
+    } catch (errorDesconocido) {
+      const mensaje =
+        errorDesconocido instanceof Error
+          ? errorDesconocido.message
+          : "No se pudo actualizar el perfil";
+
+      setErrorPerfil(mensaje);
+    } finally {
+      setGuardandoPerfil(false);
     }
+  }
 
-    setContrasenas({
-      actual: "",
-      nueva: "",
-      confirmar: "",
-    });
+  async function manejarCambioContrasena(
+    evento: React.FormEvent<HTMLFormElement>,
+  ): Promise<void> {
+    evento.preventDefault();
 
-    setMensajeContrasena(
-      "Contraseña actualizada correctamente.",
+    try {
+      setGuardandoContrasena(true);
+      setErrorContrasena("");
+      setMensajeContrasena("");
+
+      await cambiarContrasena({
+        contrasenaActual,
+        nuevaContrasena,
+        confirmarContrasena,
+      });
+
+      setContrasenaActual("");
+      setNuevaContrasena("");
+      setConfirmarContrasena("");
+
+      setMensajeContrasena(
+        "Contraseña actualizada correctamente",
+      );
+    } catch (errorDesconocido) {
+      const mensaje =
+        errorDesconocido instanceof Error
+          ? errorDesconocido.message
+          : "No se pudo actualizar la contraseña";
+
+      setErrorContrasena(mensaje);
+    } finally {
+      setGuardandoContrasena(
+        false,
+      );
+    }
+  }
+
+  if (cargando) {
+    return (
+      <p className="status-message">
+        Cargando configuración...
+      </p>
     );
   }
 
@@ -164,288 +217,274 @@ function Settings() {
     <section className="settings-page">
       <header className="settings-page__header">
         <span>Mi cuenta</span>
+
         <h1>Configuración</h1>
+
         <p>
-          Administra tu información personal, seguridad y
-          notificaciones.
+          Actualiza tus datos personales y
+          la seguridad de tu cuenta.
         </p>
       </header>
 
-      <div className="settings-layout">
-        <div className="settings-main">
-          <form
-            className="settings-card"
-            onSubmit={guardarPerfil}
-          >
-            <div className="settings-card__header">
-              <span className="settings-card__icon">
-                <UserRound size={20} />
-              </span>
-
-              <div>
-                <h2>Información personal</h2>
-                <p>
-                  Datos visibles en tu cuenta de Re-Usa.
-                </p>
-              </div>
-            </div>
-
-            <div className="settings-form-grid">
-              <label>
-                Nombre
-                <input
-                  name="nombre"
-                  type="text"
-                  value={perfil.nombre}
-                  onChange={manejarCambioPerfil}
-                  required
-                />
-              </label>
-
-              <label>
-                Apellido
-                <input
-                  name="apellido"
-                  type="text"
-                  value={perfil.apellido}
-                  onChange={manejarCambioPerfil}
-                  required
-                />
-              </label>
-
-              <label>
-                <span>
-                  <Mail size={14} />
-                  Correo electrónico
-                </span>
-
-                <input
-                  name="correo"
-                  type="email"
-                  value={perfil.correo}
-                  onChange={manejarCambioPerfil}
-                  required
-                />
-              </label>
-
-              <label>
-                Teléfono
-                <input
-                  name="telefono"
-                  type="tel"
-                  value={perfil.telefono}
-                  onChange={manejarCambioPerfil}
-                />
-              </label>
-
-              <label className="settings-form-grid__full">
-                <span>
-                  <MapPin size={14} />
-                  Ubicación
-                </span>
-
-                <input
-                  name="ubicacion"
-                  type="text"
-                  value={perfil.ubicacion}
-                  onChange={manejarCambioPerfil}
-                />
-              </label>
-            </div>
-
-            {mensajePerfil && (
-              <p className="settings-message">
-                {mensajePerfil}
-              </p>
-            )}
-
-            <div className="settings-card__actions">
-              <button type="submit">
-                <Save size={17} />
-                Guardar cambios
-              </button>
-            </div>
-          </form>
-
-          <form
-            className="settings-card"
-            onSubmit={guardarContrasena}
-          >
-            <div className="settings-card__header">
-              <span className="settings-card__icon">
-                <LockKeyhole size={20} />
-              </span>
-
-              <div>
-                <h2>Seguridad</h2>
-                <p>
-                  Actualiza la contraseña de acceso.
-                </p>
-              </div>
-            </div>
-
-            <div className="settings-password-grid">
-              <label>
-                Contraseña actual
-
-                <div className="settings-password-input">
-                  <input
-                    name="actual"
-                    type={
-                      mostrarContrasenas
-                        ? "text"
-                        : "password"
-                    }
-                    value={contrasenas.actual}
-                    onChange={manejarCambioContrasena}
-                  />
-
-                  <button
-                    type="button"
-                    aria-label={
-                      mostrarContrasenas
-                        ? "Ocultar contraseñas"
-                        : "Mostrar contraseñas"
-                    }
-                    onClick={() =>
-                      setMostrarContrasenas(
-                        (valorActual) => !valorActual,
-                      )
-                    }
-                  >
-                    {mostrarContrasenas ? (
-                      <EyeOff size={17} />
-                    ) : (
-                      <Eye size={17} />
-                    )}
-                  </button>
-                </div>
-              </label>
-
-              <label>
-                Nueva contraseña
-                <input
-                  name="nueva"
-                  type={
-                    mostrarContrasenas
-                      ? "text"
-                      : "password"
-                  }
-                  value={contrasenas.nueva}
-                  onChange={manejarCambioContrasena}
-                />
-              </label>
-
-              <label>
-                Confirmar contraseña
-                <input
-                  name="confirmar"
-                  type={
-                    mostrarContrasenas
-                      ? "text"
-                      : "password"
-                  }
-                  value={contrasenas.confirmar}
-                  onChange={manejarCambioContrasena}
-                />
-              </label>
-            </div>
-
-            {mensajeContrasena && (
-              <p className="settings-message">
-                {mensajeContrasena}
-              </p>
-            )}
-
-            <div className="settings-card__actions">
-              <button type="submit">
-                <ShieldCheck size={17} />
-                Actualizar contraseña
-              </button>
-            </div>
-          </form>
-        </div>
-
-        <aside className="settings-card settings-notifications">
-          <div className="settings-card__header">
-            <span className="settings-card__icon">
-              <Bell size={20} />
+      <div className="settings-page__layout">
+        <form
+          className="settings-card"
+          onSubmit={(evento) =>
+            void manejarActualizacionPerfil(
+              evento,
+            )
+          }
+        >
+          <header className="settings-card__header">
+            <span>
+              <UserRound size={20} />
             </span>
 
             <div>
-              <h2>Notificaciones</h2>
+              <h2>Información personal</h2>
+
               <p>
-                Elige qué avisos deseas recibir.
+                Datos visibles en tu perfil
+                y publicaciones.
               </p>
             </div>
+          </header>
+
+          {errorPerfil && (
+            <div
+              className="error-message"
+              role="alert"
+            >
+              {errorPerfil}
+            </div>
+          )}
+
+          {mensajePerfil && (
+            <div
+              className="success-message"
+              role="status"
+            >
+              <CheckCircle2 size={18} />
+              {mensajePerfil}
+            </div>
+          )}
+
+          <div className="settings-form-grid">
+            <label>
+              Nombre
+
+              <input
+                type="text"
+                value={nombre}
+                maxLength={100}
+                required
+                onChange={(evento) =>
+                  setNombre(
+                    evento.target.value,
+                  )
+                }
+              />
+            </label>
+
+            <label>
+              Apellido
+
+              <input
+                type="text"
+                value={apellido}
+                maxLength={100}
+                required
+                onChange={(evento) =>
+                  setApellido(
+                    evento.target.value,
+                  )
+                }
+              />
+            </label>
+
+            <label className="settings-form-grid__full">
+              Correo electrónico
+
+              <input
+                type="email"
+                value={email}
+                disabled
+              />
+
+              <small>
+                El correo no puede
+                modificarse desde esta
+                pantalla.
+              </small>
+            </label>
+
+            <label>
+              <span>
+                <Phone size={15} />
+                Teléfono
+              </span>
+
+              <input
+                type="tel"
+                value={telefono}
+                maxLength={30}
+                placeholder="809-000-0000"
+                onChange={(evento) =>
+                  setTelefono(
+                    evento.target.value,
+                  )
+                }
+              />
+            </label>
+
+            <label>
+              <span>
+                <MapPin size={15} />
+                Ubicación
+              </span>
+
+              <input
+                type="text"
+                value={ubicacion}
+                maxLength={200}
+                placeholder="Santo Domingo"
+                onChange={(evento) =>
+                  setUbicacion(
+                    evento.target.value,
+                  )
+                }
+              />
+            </label>
           </div>
 
-          <label className="settings-switch">
+          <button
+            className="settings-submit"
+            type="submit"
+            disabled={guardandoPerfil}
+          >
+            <Save size={17} />
+
+            {guardandoPerfil
+              ? "Guardando..."
+              : "Guardar cambios"}
+          </button>
+        </form>
+
+        <form
+          className="settings-card"
+          onSubmit={(evento) =>
+            void manejarCambioContrasena(
+              evento,
+            )
+          }
+        >
+          <header className="settings-card__header">
+            <span>
+              <KeyRound size={20} />
+            </span>
+
             <div>
-              <strong>Nuevos mensajes</strong>
-              <span>
-                Avisos cuando un usuario te escriba.
-              </span>
+              <h2>Seguridad</h2>
+
+              <p>
+                Cambia la contraseña de tu
+                cuenta.
+              </p>
             </div>
+          </header>
 
-            <input
-              type="checkbox"
-              checked={notificaciones.mensajes}
-              onChange={(event) =>
-                setNotificaciones((actuales) => ({
-                  ...actuales,
-                  mensajes: event.target.checked,
-                }))
-              }
-            />
-
-            <span aria-hidden="true" />
-          </label>
-
-          <label className="settings-switch">
-            <div>
-              <strong>Ofertas recibidas</strong>
-              <span>
-                Avisos de nuevas ofertas en tus artículos.
-              </span>
+          {errorContrasena && (
+            <div
+              className="error-message"
+              role="alert"
+            >
+              {errorContrasena}
             </div>
+          )}
 
-            <input
-              type="checkbox"
-              checked={notificaciones.ofertas}
-              onChange={(event) =>
-                setNotificaciones((actuales) => ({
-                  ...actuales,
-                  ofertas: event.target.checked,
-                }))
-              }
-            />
-
-            <span aria-hidden="true" />
-          </label>
-
-          <label className="settings-switch">
-            <div>
-              <strong>Novedades de Re-Usa</strong>
-              <span>
-                Recomendaciones y noticias del marketplace.
-              </span>
+          {mensajeContrasena && (
+            <div
+              className="success-message"
+              role="status"
+            >
+              <CheckCircle2 size={18} />
+              {mensajeContrasena}
             </div>
+          )}
 
-            <input
-              type="checkbox"
-              checked={notificaciones.novedades}
-              onChange={(event) =>
-                setNotificaciones((actuales) => ({
-                  ...actuales,
-                  novedades: event.target.checked,
-                }))
-              }
-            />
+          <div className="settings-password-fields">
+            <label>
+              Contraseña actual
 
-            <span aria-hidden="true" />
-          </label>
-        </aside>
+              <input
+                type="password"
+                value={contrasenaActual}
+                autoComplete="current-password"
+                required
+                onChange={(evento) =>
+                  setContrasenaActual(
+                    evento.target.value,
+                  )
+                }
+              />
+            </label>
+
+            <label>
+              Nueva contraseña
+
+              <input
+                type="password"
+                value={nuevaContrasena}
+                minLength={8}
+                autoComplete="new-password"
+                required
+                onChange={(evento) =>
+                  setNuevaContrasena(
+                    evento.target.value,
+                  )
+                }
+              />
+
+              <small>
+                Debe tener al menos 8
+                caracteres.
+              </small>
+            </label>
+
+            <label>
+              Confirmar nueva contraseña
+
+              <input
+                type="password"
+                value={
+                  confirmarContrasena
+                }
+                minLength={8}
+                autoComplete="new-password"
+                required
+                onChange={(evento) =>
+                  setConfirmarContrasena(
+                    evento.target.value,
+                  )
+                }
+              />
+            </label>
+          </div>
+
+          <button
+            className="settings-submit"
+            type="submit"
+            disabled={
+              guardandoContrasena
+            }
+          >
+            <KeyRound size={17} />
+
+            {guardandoContrasena
+              ? "Actualizando..."
+              : "Cambiar contraseña"}
+          </button>
+        </form>
       </div>
     </section>
   );
