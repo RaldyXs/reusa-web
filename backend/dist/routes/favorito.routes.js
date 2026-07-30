@@ -1,0 +1,12 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const favorito_controller_js_1 = require("../controllers/favorito.controller.js");
+const auth_middleware_js_1 = require("../middlewares/auth.middleware.js");
+const favoritoRouter = (0, express_1.Router)();
+favoritoRouter.use(auth_middleware_js_1.verificarToken);
+favoritoRouter.get("/", favorito_controller_js_1.obtenerFavoritos);
+favoritoRouter.get("/ids", favorito_controller_js_1.obtenerIdsFavoritos);
+favoritoRouter.post("/:articuloId", favorito_controller_js_1.guardarFavorito);
+favoritoRouter.delete("/:articuloId", favorito_controller_js_1.quitarFavorito);
+exports.default = favoritoRouter;

@@ -1,6 +1,7 @@
 import {
   BarChart3,
   FolderTree,
+  HandCoins,
   LogOut,
   PackageSearch,
   Settings,
@@ -40,7 +41,6 @@ function AdminSidebar() {
 
         <div>
           <strong>Admin Panel</strong>
-
           <span>Re-Usa Web</span>
         </div>
       </div>
@@ -101,6 +101,18 @@ function AdminSidebar() {
         >
           <PackageSearch size={18} />
           Publicaciones
+        </NavLink>
+
+        <NavLink
+          to="/admin/ofertas"
+          className={({ isActive }) =>
+            isActive
+              ? "admin-sidebar__link admin-sidebar__link--active"
+              : "admin-sidebar__link"
+          }
+        >
+          <HandCoins size={18} />
+          Ofertas
         </NavLink>
 
         <NavLink

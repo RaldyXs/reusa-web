@@ -4,7 +4,9 @@ import {
   actualizarEstadoOferta,
   listarOfertasRealizadas,
   listarOfertasRecibidas,
+  registrarContraoferta,
   registrarOferta,
+  responderContraofertaRecibida,
 } from "../controllers/oferta.controller.js";
 
 import {
@@ -33,6 +35,16 @@ ofertaRouter.get(
 ofertaRouter.patch(
   "/:ofertaId/estado",
   actualizarEstadoOferta,
+);
+
+ofertaRouter.patch(
+  "/:ofertaId/contraoferta",
+  registrarContraoferta,
+);
+
+ofertaRouter.patch(
+  "/:ofertaId/responder-contraoferta",
+  responderContraofertaRecibida,
 );
 
 export default ofertaRouter;

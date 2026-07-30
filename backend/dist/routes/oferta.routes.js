@@ -1,0 +1,14 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const oferta_controller_js_1 = require("../controllers/oferta.controller.js");
+const auth_middleware_js_1 = require("../middlewares/auth.middleware.js");
+const ofertaRouter = (0, express_1.Router)();
+ofertaRouter.use(auth_middleware_js_1.verificarToken);
+ofertaRouter.post("/", oferta_controller_js_1.registrarOferta);
+ofertaRouter.get("/realizadas", oferta_controller_js_1.listarOfertasRealizadas);
+ofertaRouter.get("/recibidas", oferta_controller_js_1.listarOfertasRecibidas);
+ofertaRouter.patch("/:ofertaId/estado", oferta_controller_js_1.actualizarEstadoOferta);
+ofertaRouter.patch("/:ofertaId/contraoferta", oferta_controller_js_1.registrarContraoferta);
+ofertaRouter.patch("/:ofertaId/responder-contraoferta", oferta_controller_js_1.responderContraofertaRecibida);
+exports.default = ofertaRouter;

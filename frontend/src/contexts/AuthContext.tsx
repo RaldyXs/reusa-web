@@ -1,5 +1,6 @@
 import {
   type ReactNode,
+  useEffect,
   useMemo,
   useState,
 } from "react";
@@ -9,7 +10,10 @@ import type {
   UsuarioSesion,
 } from "../interfaces/auth";
 
-import { iniciarSesion as solicitarLogin } from "../services/authService";
+import {
+  iniciarSesion as solicitarLogin,
+} from "../services/authService";
+
 import {
   AuthContext,
   type AuthContextValue,
@@ -20,6 +24,8 @@ interface AuthProviderProps {
 }
 
 const CLAVE_SESION = "reusa_sesion";
+const EVENTO_SESION_ACTUALIZADA =
+  "reusa-sesion-actualizada";
 
 function leerSesionGuardada(): Sesion | null {
   const valorGuardado =
@@ -57,14 +63,56 @@ export function AuthProvider({
       leerSesionGuardada(),
     );
 
+  useEffect(() => {
+    function actualizarSesionDesdeAlmacenamiento(): void {
+      setSesion(
+        leerSesionGuardada(),
+      );
+    }
+
+    function manejarCambioAlmacenamiento(
+      evento: StorageEvent,
+    ): void {
+      if (
+        evento.key === CLAVE_SESION ||
+        evento.key === null
+      ) {
+        actualizarSesionDesdeAlmacenamiento();
+      }
+    }
+
+    window.addEventListener(
+      EVENTO_SESION_ACTUALIZADA,
+      actualizarSesionDesdeAlmacenamiento,
+    );
+
+    window.addEventListener(
+      "storage",
+      manejarCambioAlmacenamiento,
+    );
+
+    return () => {
+      window.removeEventListener(
+        EVENTO_SESION_ACTUALIZADA,
+        actualizarSesionDesdeAlmacenamiento,
+      );
+
+      window.removeEventListener(
+        "storage",
+        manejarCambioAlmacenamiento,
+      );
+    };
+  }, []);
+
   async function login(
     email: string,
     contrasena: string,
   ): Promise<UsuarioSesion> {
-    const nuevaSesion = await solicitarLogin(
-      email,
-      contrasena,
-    );
+    const nuevaSesion =
+      await solicitarLogin(
+        email,
+        contrasena,
+      );
 
     localStorage.setItem(
       CLAVE_SESION,
@@ -77,25 +125,37 @@ export function AuthProvider({
   }
 
   function logout(): void {
-    localStorage.removeItem(CLAVE_SESION);
+    localStorage.removeItem(
+      CLAVE_SESION,
+    );
+
     setSesion(null);
   }
 
-  const valor = useMemo<AuthContextValue>(
-    () => ({
-      usuario: sesion?.usuario ?? null,
-      token: sesion?.token ?? null,
-      autenticado: Boolean(
-        sesion?.token && sesion.usuario,
-      ),
-      login,
-      logout,
-    }),
-    [sesion],
-  );
+  const valor =
+    useMemo<AuthContextValue>(
+      () => ({
+        usuario:
+          sesion?.usuario ?? null,
+
+        token:
+          sesion?.token ?? null,
+
+        autenticado: Boolean(
+          sesion?.token &&
+            sesion.usuario,
+        ),
+
+        login,
+        logout,
+      }),
+      [sesion],
+    );
 
   return (
-    <AuthContext.Provider value={valor}>
+    <AuthContext.Provider
+      value={valor}
+    >
       {children}
     </AuthContext.Provider>
   );

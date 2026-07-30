@@ -5,6 +5,7 @@ import {
   cambiarEstadoArticulo,
   editarArticulo,
   eliminarImagenArticulo,
+  eliminarPublicacion,
   guardarImagenesArticulo,
   obtenerArticulo,
   obtenerArticulos,
@@ -33,7 +34,10 @@ articuloRouter.get(
   obtenerMisPublicaciones,
 );
 
-articuloRouter.get("/", obtenerArticulos);
+articuloRouter.get(
+  "/",
+  obtenerArticulos,
+);
 
 articuloRouter.post(
   "/",
@@ -94,6 +98,16 @@ articuloRouter.put(
     "administrador",
   ]),
   editarArticulo,
+);
+
+articuloRouter.delete(
+  "/:id",
+  verificarToken,
+  permitirRoles([
+    "usuario",
+    "administrador",
+  ]),
+  eliminarPublicacion,
 );
 
 articuloRouter.get(

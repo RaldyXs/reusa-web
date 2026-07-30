@@ -7,9 +7,11 @@ import type {
 } from "../middlewares/auth.middleware.js";
 
 import {
+  crearContraoferta,
   crearOferta,
   obtenerOfertasRealizadas,
   obtenerOfertasRecibidas,
+  responderContraoferta,
   responderOferta,
 } from "../services/oferta.service.js";
 
@@ -124,6 +126,12 @@ function obtenerCodigoEstado(
     ) ||
     mensaje.includes(
       "ya fue respondida",
+    ) ||
+    mensaje.includes(
+      "Solo puedes contraofertar",
+    ) ||
+    mensaje.includes(
+      "no tiene una contraoferta",
     )
   ) {
     return 400;
@@ -303,6 +311,108 @@ export async function actualizarEstadoOferta(
     if (codigoEstado === 500) {
       console.error(
         "Error al responder oferta:",
+        errorDesconocido,
+      );
+    }
+
+    response.status(codigoEstado).json({
+      ok: false,
+      message: mensaje,
+    });
+  }
+}
+
+export async function registrarContraoferta(
+  request: RequestAutenticado,
+  response: Response,
+): Promise<void> {
+  try {
+    const vendedorId =
+      obtenerUsuarioId(request);
+
+    const ofertaId =
+      obtenerOfertaId(request);
+
+    const precioContraoferta =
+      Number(
+        request.body
+          .precioContraoferta,
+      );
+
+    await crearContraoferta(
+      ofertaId,
+      vendedorId,
+      precioContraoferta,
+      request.body
+        .mensajeContraoferta,
+    );
+
+    response.status(200).json({
+      ok: true,
+      message:
+        "Contraoferta enviada correctamente",
+    });
+  } catch (errorDesconocido) {
+    const mensaje =
+      errorDesconocido instanceof Error
+        ? errorDesconocido.message
+        : "No se pudo registrar la contraoferta";
+
+    const codigoEstado =
+      obtenerCodigoEstado(mensaje);
+
+    if (codigoEstado === 500) {
+      console.error(
+        "Error al registrar contraoferta:",
+        errorDesconocido,
+      );
+    }
+
+    response.status(codigoEstado).json({
+      ok: false,
+      message: mensaje,
+    });
+  }
+}
+
+export async function responderContraofertaRecibida(
+  request: RequestAutenticado,
+  response: Response,
+): Promise<void> {
+  try {
+    const compradorId =
+      obtenerUsuarioId(request);
+
+    const ofertaId =
+      obtenerOfertaId(request);
+
+    const aceptar =
+      request.body.aceptar;
+
+    await responderContraoferta(
+      ofertaId,
+      compradorId,
+      aceptar,
+    );
+
+    response.status(200).json({
+      ok: true,
+      message: aceptar
+        ? "Contraoferta aceptada correctamente"
+        : "Contraoferta rechazada correctamente",
+    });
+  } catch (errorDesconocido) {
+    const mensaje =
+      errorDesconocido instanceof Error
+        ? errorDesconocido.message
+        : "No se pudo responder la contraoferta";
+
+    const codigoEstado =
+      obtenerCodigoEstado(mensaje);
+
+    if (codigoEstado === 500) {
+      console.error(
+        "Error al responder contraoferta:",
         errorDesconocido,
       );
     }

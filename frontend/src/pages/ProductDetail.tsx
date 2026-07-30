@@ -21,6 +21,8 @@ import {
   useParams,
 } from "react-router-dom";
 
+import { useAuth } from "../hooks/useAuth";
+
 import type {
   Articulo,
 } from "../interfaces/articulo";
@@ -41,12 +43,20 @@ import {
 } from "../services/favoritoService";
 
 import {
+  crearOObtenerConversacion,
+} from "../services/mensajeService";
+
+import {
   crearOferta,
 } from "../services/ofertaService";
 
 function ProductDetail() {
   const navigate = useNavigate();
   const { id } = useParams();
+  const {
+    autenticado,
+    usuario,
+  } = useAuth();
 
   const [articulo, setArticulo] =
     useState<Articulo | null>(null);
@@ -61,25 +71,35 @@ function ProductDetail() {
     setMostrarFormularioOferta,
   ] = useState(false);
 
-  const [precioOferta, setPrecioOferta] =
-    useState("");
+  const [
+    precioOferta,
+    setPrecioOferta,
+  ] = useState("");
 
-  const [mensajeOferta, setMensajeOferta] =
-    useState("");
+  const [
+    mensajeOferta,
+    setMensajeOferta,
+  ] = useState("");
 
   const [
     enviandoOferta,
     setEnviandoOferta,
   ] = useState(false);
 
-  const [ofertaEnviada, setOfertaEnviada] =
-    useState(false);
+  const [
+    ofertaEnviada,
+    setOfertaEnviada,
+  ] = useState(false);
 
-  const [errorOferta, setErrorOferta] =
-    useState("");
+  const [
+    errorOferta,
+    setErrorOferta,
+  ] = useState("");
 
-  const [guardado, setGuardado] =
-    useState(false);
+  const [
+    guardado,
+    setGuardado,
+  ] = useState(false);
 
   const [
     procesandoGuardado,
@@ -118,20 +138,35 @@ function ProductDetail() {
     setMensajeContacto,
   ] = useState("");
 
-  const [cargando, setCargando] =
-    useState(true);
+  const [
+    procesandoMensaje,
+    setProcesandoMensaje,
+  ] = useState(false);
 
-  const [error, setError] =
-    useState("");
+  const [
+    errorMensaje,
+    setErrorMensaje,
+  ] = useState("");
+
+  const [
+    cargando,
+    setCargando,
+  ] = useState(true);
+
+  const [
+    error,
+    setError,
+  ] = useState("");
 
   useEffect(() => {
     let componenteActivo = true;
 
-    async function cargarArticulo() {
+    async function cargarArticulo(): Promise<void> {
       try {
         setCargando(true);
         setError("");
         setErrorGuardado("");
+        setErrorMensaje("");
         setContactoVendedor(null);
         setErrorContacto("");
         setMensajeContacto("");
@@ -279,6 +314,85 @@ function ProductDetail() {
     }
   }
 
+  async function iniciarConversacion(): Promise<void> {
+    if (!articulo) {
+      return;
+    }
+
+    if (!autenticado || !usuario) {
+      navigate("/login");
+      return;
+    }
+
+    const articuloId = Number(
+      articulo.articulo_id,
+    );
+
+    const vendedorId = Number(
+      articulo.vendedor_id,
+    );
+
+    const usuarioId = Number(
+      usuario.usuarioId,
+    );
+
+    if (
+      !Number.isInteger(articuloId) ||
+      articuloId <= 0
+    ) {
+      setErrorMensaje(
+        "El artículo no es válido",
+      );
+
+      return;
+    }
+
+    if (
+      Number.isInteger(vendedorId) &&
+      vendedorId === usuarioId
+    ) {
+      setErrorMensaje(
+        "No puedes enviarte mensajes sobre tu propia publicación",
+      );
+
+      return;
+    }
+
+    try {
+      setProcesandoMensaje(true);
+      setErrorMensaje("");
+
+      const conversacionId =
+        await crearOObtenerConversacion(
+          articuloId,
+        );
+
+      navigate(
+        `/mensajes?conversacion=${conversacionId}`,
+      );
+    } catch (errorDesconocido) {
+      const mensaje =
+        errorDesconocido instanceof Error
+          ? errorDesconocido.message
+          : "No se pudo iniciar la conversación";
+
+      setErrorMensaje(mensaje);
+
+      if (
+        mensaje
+          .toLowerCase()
+          .includes("iniciar sesión") ||
+        mensaje
+          .toLowerCase()
+          .includes("sesión")
+      ) {
+        navigate("/login");
+      }
+    } finally {
+      setProcesandoMensaje(false);
+    }
+  }
+
   async function alternarGuardado(): Promise<void> {
     if (
       !articulo ||
@@ -355,7 +469,8 @@ function ProductDetail() {
       if (navigator.share) {
         await navigator.share({
           title: articulo.titulo,
-          text: `Mira este artículo en Re-Usa: ${articulo.titulo}`,
+          text:
+            `Mira este artículo en Re-Usa: ${articulo.titulo}`,
           url,
         });
 
@@ -372,7 +487,8 @@ function ProductDetail() {
     } catch (errorDesconocido) {
       if (
         errorDesconocido instanceof DOMException &&
-        errorDesconocido.name === "AbortError"
+        errorDesconocido.name ===
+          "AbortError"
       ) {
         return;
       }
@@ -400,7 +516,9 @@ function ProductDetail() {
           ),
         );
 
-      setContactoVendedor(contacto);
+      setContactoVendedor(
+        contacto,
+      );
     } catch (errorDesconocido) {
       const mensaje =
         errorDesconocido instanceof Error
@@ -489,19 +607,35 @@ function ProductDetail() {
     articulo.imagenes.length > 0
       ? articulo.imagenes
       : articulo.imagen_principal
-        ? [articulo.imagen_principal]
+        ? [
+            articulo.imagen_principal,
+          ]
         : [];
 
   const articuloDisponible =
     articulo.estado === "activo" &&
-    Number(articulo.archivado) !== 1;
+    Number(
+      articulo.archivado,
+    ) !== 1;
+
+  const esPropioArticulo =
+    autenticado &&
+    usuario &&
+    Number(
+      usuario.usuarioId,
+    ) ===
+      Number(
+        articulo.vendedor_id,
+      );
 
   return (
     <section className="product-detail-page">
       <button
         className="product-detail-back"
         type="button"
-        onClick={() => navigate(-1)}
+        onClick={() =>
+          navigate(-1)
+        }
       >
         <ArrowLeft size={18} />
         Volver
@@ -512,8 +646,12 @@ function ProductDetail() {
           <div className="product-detail-main-image">
             {imagenSeleccionada ? (
               <img
-                src={imagenSeleccionada}
-                alt={articulo.titulo}
+                src={
+                  imagenSeleccionada
+                }
+                alt={
+                  articulo.titulo
+                }
               />
             ) : (
               <div className="product-detail-placeholder">
@@ -529,7 +667,10 @@ function ProductDetail() {
           {imagenes.length > 0 && (
             <div className="product-detail-thumbnails">
               {imagenes.map(
-                (imagen, indice) => (
+                (
+                  imagen,
+                  indice,
+                ) => (
                   <button
                     type="button"
                     key={`${imagen}-${indice}`}
@@ -549,7 +690,9 @@ function ProductDetail() {
                     }`}
                   >
                     <img
-                      src={imagen}
+                      src={
+                        imagen
+                      }
                       alt={`${articulo.titulo} ${
                         indice + 1
                       }`}
@@ -566,7 +709,9 @@ function ProductDetail() {
             {articulo.categoria}
           </span>
 
-          <h1>{articulo.titulo}</h1>
+          <h1>
+            {articulo.titulo}
+          </h1>
 
           <strong className="product-detail-price">
             {precioFormateado}
@@ -615,7 +760,8 @@ function ProductDetail() {
           )}
 
           {articuloDisponible &&
-            !ofertaEnviada && (
+            !ofertaEnviada &&
+            !esPropioArticulo && (
               <button
                 className="product-detail-contact"
                 type="button"
@@ -631,22 +777,54 @@ function ProductDetail() {
               </button>
             )}
 
-          <button
-            className="product-detail-contact"
-            type="button"
-            disabled={cargandoContacto}
-            onClick={() =>
-              void cargarContactoVendedor()
-            }
-          >
-            <UserRound size={18} />
+          {!esPropioArticulo && (
+            <button
+              className="product-detail-contact"
+              type="button"
+              disabled={
+                procesandoMensaje
+              }
+              onClick={() =>
+                void iniciarConversacion()
+              }
+            >
+              <MessageSquare size={18} />
 
-            {cargandoContacto
-              ? "Consultando contacto..."
-              : contactoVendedor
-                ? "Actualizar contacto"
-                : "Contactar al vendedor"}
-          </button>
+              {procesandoMensaje
+                ? "Abriendo conversación..."
+                : "Enviar mensaje al vendedor"}
+            </button>
+          )}
+
+          {errorMensaje && (
+            <div
+              className="error-message"
+              role="alert"
+            >
+              {errorMensaje}
+            </div>
+          )}
+
+          {!esPropioArticulo && (
+            <button
+              className="product-detail-contact"
+              type="button"
+              disabled={
+                cargandoContacto
+              }
+              onClick={() =>
+                void cargarContactoVendedor()
+              }
+            >
+              <UserRound size={18} />
+
+              {cargandoContacto
+                ? "Consultando contacto..."
+                : contactoVendedor
+                  ? "Actualizar contacto"
+                  : "Contactar al vendedor"}
+            </button>
+          )}
 
           {contactoVendedor && (
             <section className="product-detail-card">
@@ -670,7 +848,10 @@ function ProductDetail() {
                     setContactoVendedor(
                       null,
                     );
-                    setMensajeContacto("");
+
+                    setMensajeContacto(
+                      "",
+                    );
                   }}
                 >
                   <X size={18} />
@@ -724,9 +905,7 @@ function ProductDetail() {
                   className="success-message"
                   role="status"
                 >
-                  <CheckCircle2
-                    size={18}
-                  />
+                  <CheckCircle2 size={18} />
 
                   <span>
                     {mensajeContacto}
@@ -772,6 +951,7 @@ function ProductDetail() {
                     setMostrarFormularioOferta(
                       false,
                     );
+
                     setErrorOferta("");
                   }}
                 >
@@ -786,7 +966,9 @@ function ProductDetail() {
                   type="number"
                   min="1"
                   step="0.01"
-                  value={precioOferta}
+                  value={
+                    precioOferta
+                  }
                   onChange={(evento) =>
                     setPrecioOferta(
                       evento.target.value,
@@ -800,7 +982,9 @@ function ProductDetail() {
                 Mensaje opcional
 
                 <textarea
-                  value={mensajeOferta}
+                  value={
+                    mensajeOferta
+                  }
                   onChange={(evento) =>
                     setMensajeOferta(
                       evento.target.value,
@@ -814,7 +998,9 @@ function ProductDetail() {
 
               <button
                 type="submit"
-                disabled={enviandoOferta}
+                disabled={
+                  enviandoOferta
+                }
               >
                 {enviandoOferta
                   ? "Enviando..."
@@ -826,7 +1012,9 @@ function ProductDetail() {
           <div className="product-detail-secondary-actions">
             <button
               type="button"
-              disabled={procesandoGuardado}
+              disabled={
+                procesandoGuardado
+              }
               className={
                 guardado
                   ? "product-detail-save product-detail-save--active"
@@ -891,6 +1079,7 @@ function ProductDetail() {
             <dl>
               <div>
                 <dt>Condición</dt>
+
                 <dd>
                   {articulo.condicion}
                 </dd>
@@ -898,6 +1087,7 @@ function ProductDetail() {
 
               <div>
                 <dt>Categoría</dt>
+
                 <dd>
                   {articulo.categoria}
                 </dd>
@@ -905,6 +1095,7 @@ function ProductDetail() {
 
               <div>
                 <dt>Ubicación</dt>
+
                 <dd>
                   {articulo.ubicacion ??
                     "No indicada"}
@@ -913,6 +1104,7 @@ function ProductDetail() {
 
               <div>
                 <dt>Estado</dt>
+
                 <dd>
                   {articulo.estado}
                 </dd>
@@ -935,7 +1127,9 @@ function ProductDetail() {
             </div>
 
             <div>
-              <span>Vendido por</span>
+              <span>
+                Vendido por
+              </span>
 
               <strong>
                 {articulo.vendedor ??

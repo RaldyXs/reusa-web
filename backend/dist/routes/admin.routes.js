@@ -1,0 +1,18 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const admin_controller_js_1 = require("../controllers/admin.controller.js");
+const auth_middleware_js_1 = require("../middlewares/auth.middleware.js");
+const adminRouter = (0, express_1.Router)();
+adminRouter.use(auth_middleware_js_1.verificarToken, (0, auth_middleware_js_1.permitirRoles)(["administrador"]));
+adminRouter.get("/resumen", admin_controller_js_1.obtenerResumenAdmin);
+adminRouter.get("/estadisticas", admin_controller_js_1.obtenerEstadisticasDashboardAdmin);
+adminRouter.get("/usuarios", admin_controller_js_1.obtenerUsuariosAdmin);
+adminRouter.patch("/usuarios/:usuarioId/estado", admin_controller_js_1.cambiarEstadoUsuarioAdmin);
+adminRouter.get("/publicaciones", admin_controller_js_1.obtenerPublicacionesAdmin);
+adminRouter.patch("/publicaciones/:articuloId/estado", admin_controller_js_1.cambiarEstadoPublicacionAdmin);
+adminRouter.get("/categorias", admin_controller_js_1.obtenerCategoriasAdmin);
+adminRouter.post("/categorias", admin_controller_js_1.crearCategoriaAdmin);
+adminRouter.put("/categorias/:categoriaId", admin_controller_js_1.actualizarCategoriaAdmin);
+adminRouter.patch("/categorias/:categoriaId/estado", admin_controller_js_1.cambiarEstadoCategoriaAdmin);
+exports.default = adminRouter;

@@ -1,0 +1,11 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const cuenta_controller_js_1 = require("../controllers/cuenta.controller.js");
+const auth_middleware_js_1 = require("../middlewares/auth.middleware.js");
+const cuentaRouter = (0, express_1.Router)();
+cuentaRouter.use(auth_middleware_js_1.verificarToken);
+cuentaRouter.get("/perfil", cuenta_controller_js_1.obtenerPerfil);
+cuentaRouter.put("/perfil", cuenta_controller_js_1.actualizarPerfil);
+cuentaRouter.patch("/contrasena", cuenta_controller_js_1.cambiarContrasena);
+exports.default = cuentaRouter;

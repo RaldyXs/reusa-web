@@ -4,6 +4,7 @@ import {
   MessageSquareText,
   Package,
   UserRound,
+  X,
 } from "lucide-react";
 import {
   useCallback,
@@ -12,6 +13,7 @@ import {
 } from "react";
 
 import {
+  crearContraoferta,
   obtenerOfertasRecibidas,
   responderOferta,
   type EstadoOferta,
@@ -68,7 +70,7 @@ function obtenerTextoEstado(
     pendiente: "Pendiente",
     aceptada: "Aceptada",
     rechazada: "Rechazada",
-    contraoferta: "Contraoferta",
+    contraoferta: "Contraoferta enviada",
   };
 
   return textos[estado];
@@ -78,9 +80,7 @@ function SalesHistory() {
   const [
     estadoSeleccionado,
     setEstadoSeleccionado,
-  ] = useState<FiltroEstado>(
-    "todos",
-  );
+  ] = useState<FiltroEstado>("todos");
 
   const [ofertas, setOfertas] =
     useState<Oferta[]>([]);
@@ -92,9 +92,29 @@ function SalesHistory() {
     useState("");
 
   const [
+    mensajeExito,
+    setMensajeExito,
+  ] = useState("");
+
+  const [
     ofertaProcesandoId,
     setOfertaProcesandoId,
   ] = useState<number | null>(null);
+
+  const [
+    ofertaContraofertaId,
+    setOfertaContraofertaId,
+  ] = useState<number | null>(null);
+
+  const [
+    precioContraoferta,
+    setPrecioContraoferta,
+  ] = useState("");
+
+  const [
+    mensajeContraoferta,
+    setMensajeContraoferta,
+  ] = useState("");
 
   const cargarOfertas =
     useCallback(async (): Promise<void> => {
@@ -120,15 +140,47 @@ function SalesHistory() {
     }, []);
 
   useEffect(() => {
-    // Defer callivamosng the async loader to avoid setting state synchronously within the effect
-    void Promise.resolve().then(() => cargarOfertas());
+    const timeoutId = window.setTimeout(() => {
+      void cargarOfertas();
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
   }, [cargarOfertas]);
+
+  function abrirContraoferta(
+    oferta: Oferta,
+  ): void {
+    setError("");
+    setMensajeExito("");
+
+    setOfertaContraofertaId(
+      oferta.oferta_id,
+    );
+
+    setPrecioContraoferta(
+      String(
+        Math.round(
+          Number(
+            oferta.precio_ofertado,
+          ),
+        ),
+      ),
+    );
+
+    setMensajeContraoferta("");
+  }
+
+  function cerrarContraoferta(): void {
+    setOfertaContraofertaId(null);
+    setPrecioContraoferta("");
+    setMensajeContraoferta("");
+  }
 
   async function manejarRespuestaOferta(
     ofertaId: number,
-    estado:
-      | "aceptada"
-      | "rechazada",
+    estado: "aceptada" | "rechazada",
   ): Promise<void> {
     const mensajeConfirmacion =
       estado === "aceptada"
@@ -150,52 +202,20 @@ function SalesHistory() {
       );
 
       setError("");
+      setMensajeExito("");
 
       await responderOferta(
         ofertaId,
         estado,
       );
 
-      const ofertaRespondida =
-        ofertas.find(
-          (oferta) =>
-            oferta.oferta_id ===
-            ofertaId,
-        );
-
-      setOfertas(
-        (ofertasActuales) =>
-          ofertasActuales.map(
-            (oferta) => {
-              if (
-                oferta.oferta_id ===
-                ofertaId
-              ) {
-                return {
-                  ...oferta,
-                  estado,
-                };
-              }
-
-              if (
-                estado === "aceptada" &&
-                ofertaRespondida &&
-                oferta.articulo_id ===
-                  ofertaRespondida.articulo_id &&
-                oferta.estado ===
-                  "pendiente"
-              ) {
-                return {
-                  ...oferta,
-                  estado:
-                    "rechazada",
-                };
-              }
-
-              return oferta;
-            },
-          ),
+      setMensajeExito(
+        estado === "aceptada"
+          ? "Oferta aceptada correctamente"
+          : "Oferta rechazada correctamente",
       );
+
+      await cargarOfertas();
     } catch (errorDesconocido) {
       const mensaje =
         errorDesconocido instanceof Error
@@ -203,8 +223,67 @@ function SalesHistory() {
           : "No se pudo responder la oferta";
 
       setError(mensaje);
+    } finally {
+      setOfertaProcesandoId(
+        null,
+      );
+    }
+  }
+
+  async function manejarEnvioContraoferta(
+    evento: React.FormEvent<HTMLFormElement>,
+  ): Promise<void> {
+    evento.preventDefault();
+
+    if (!ofertaContraofertaId) {
+      return;
+    }
+
+    const precioNumerico = Number(
+      precioContraoferta,
+    );
+
+    if (
+      !Number.isFinite(
+        precioNumerico,
+      ) ||
+      precioNumerico <= 0
+    ) {
+      setError(
+        "Ingresa un precio de contraoferta válido",
+      );
+
+      return;
+    }
+
+    try {
+      setOfertaProcesandoId(
+        ofertaContraofertaId,
+      );
+
+      setError("");
+      setMensajeExito("");
+
+      await crearContraoferta(
+        ofertaContraofertaId,
+        precioNumerico,
+        mensajeContraoferta,
+      );
+
+      setMensajeExito(
+        "Contraoferta enviada correctamente",
+      );
+
+      cerrarContraoferta();
 
       await cargarOfertas();
+    } catch (errorDesconocido) {
+      const mensaje =
+        errorDesconocido instanceof Error
+          ? errorDesconocido.message
+          : "No se pudo enviar la contraoferta";
+
+      setError(mensaje);
     } finally {
       setOfertaProcesandoId(
         null,
@@ -229,11 +308,16 @@ function SalesHistory() {
 
   const totalVendido =
     ofertasAceptadas.reduce(
-      (total, oferta) =>
-        total +
-        Number(
-          oferta.precio_ofertado,
-        ),
+      (total, oferta) => {
+        const precioFinal =
+          oferta.precio_contraoferta ??
+          oferta.precio_ofertado;
+
+        return (
+          total +
+          Number(precioFinal)
+        );
+      },
       0,
     );
 
@@ -255,8 +339,8 @@ function SalesHistory() {
 
           <p>
             Revisa las ofertas recibidas,
-            sus mensajes y responde cada
-            propuesta.
+            acepta, rechaza o envía una
+            contraoferta.
           </p>
         </div>
 
@@ -279,16 +363,16 @@ function SalesHistory() {
               Pendientes
             </option>
 
+            <option value="contraoferta">
+              Contraofertas
+            </option>
+
             <option value="aceptada">
               Aceptadas
             </option>
 
             <option value="rechazada">
               Rechazadas
-            </option>
-
-            <option value="contraoferta">
-              Contraofertas
             </option>
           </select>
 
@@ -301,9 +385,7 @@ function SalesHistory() {
 
       <div className="sales-summary">
         <article>
-          <CircleDollarSign
-            size={21}
-          />
+          <CircleDollarSign size={21} />
 
           <div>
             <strong>
@@ -351,6 +433,15 @@ function SalesHistory() {
           role="alert"
         >
           {error}
+        </div>
+      )}
+
+      {mensajeExito && (
+        <div
+          className="success-message"
+          role="status"
+        >
+          {mensajeExito}
         </div>
       )}
 
@@ -425,6 +516,21 @@ function SalesHistory() {
                               "El comprador no agregó un mensaje."}
                           </span>
                         </div>
+
+                        {oferta.mensaje_contraoferta && (
+                          <div className="history-offer-message">
+                            <MessageSquareText
+                              size={14}
+                            />
+
+                            <span>
+                              Contraoferta:{" "}
+                              {
+                                oferta.mensaje_contraoferta
+                              }
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -451,11 +557,22 @@ function SalesHistory() {
                       </div>
                     </div>
 
-                    <strong className="history-price">
-                      {formatearPrecio(
-                        oferta.precio_ofertado,
+                    <div>
+                      <strong className="history-price">
+                        {formatearPrecio(
+                          oferta.precio_ofertado,
+                        )}
+                      </strong>
+
+                      {oferta.precio_contraoferta && (
+                        <small>
+                          Contraoferta:{" "}
+                          {formatearPrecio(
+                            oferta.precio_contraoferta,
+                          )}
+                        </small>
                       )}
-                    </strong>
+                    </div>
 
                     <span>
                       {formatearFecha(
@@ -487,9 +604,21 @@ function SalesHistory() {
                               )
                             }
                           >
-                            {procesando
-                              ? "Procesando..."
-                              : "Aceptar"}
+                            Aceptar
+                          </button>
+
+                          <button
+                            type="button"
+                            disabled={
+                              procesando
+                            }
+                            onClick={() =>
+                              abrirContraoferta(
+                                oferta,
+                              )
+                            }
+                          >
+                            Contraofertar
                           </button>
 
                           <button
@@ -513,6 +642,82 @@ function SalesHistory() {
                         </span>
                       )}
                     </div>
+
+                    {ofertaContraofertaId ===
+                      oferta.oferta_id && (
+                      <form
+                        className="history-counteroffer-form"
+                        onSubmit={(evento) =>
+                          void manejarEnvioContraoferta(
+                            evento,
+                          )
+                        }
+                      >
+                        <div>
+                          <strong>
+                            Enviar contraoferta
+                          </strong>
+
+                          <button
+                            type="button"
+                            aria-label="Cerrar contraoferta"
+                            onClick={
+                              cerrarContraoferta
+                            }
+                          >
+                            <X size={17} />
+                          </button>
+                        </div>
+
+                        <label>
+                          Nuevo precio
+
+                          <input
+                            type="number"
+                            min="1"
+                            step="0.01"
+                            value={
+                              precioContraoferta
+                            }
+                            onChange={(evento) =>
+                              setPrecioContraoferta(
+                                evento.target.value,
+                              )
+                            }
+                            required
+                          />
+                        </label>
+
+                        <label>
+                          Mensaje opcional
+
+                          <textarea
+                            rows={3}
+                            maxLength={500}
+                            value={
+                              mensajeContraoferta
+                            }
+                            onChange={(evento) =>
+                              setMensajeContraoferta(
+                                evento.target.value,
+                              )
+                            }
+                            placeholder="Explica tu nueva propuesta"
+                          />
+                        </label>
+
+                        <button
+                          type="submit"
+                          disabled={
+                            procesando
+                          }
+                        >
+                          {procesando
+                            ? "Enviando..."
+                            : "Enviar contraoferta"}
+                        </button>
+                      </form>
+                    )}
                   </article>
                 );
               },
@@ -522,8 +727,7 @@ function SalesHistory() {
           {ofertasFiltradas.length ===
             0 && (
             <p className="status-message">
-              No hay ofertas con ese
-              estado.
+              No hay ofertas con ese estado.
             </p>
           )}
 

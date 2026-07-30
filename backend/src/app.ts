@@ -7,10 +7,12 @@ import adminRouter from "./routes/admin.routes.js";
 import articuloRouter from "./routes/articulo.routes.js";
 import authRouter from "./routes/auth.routes.js";
 import categoriaRouter from "./routes/categoria.routes.js";
-import favoritoRouter from "./routes/favorito.routes.js";
-import ofertaRouter from "./routes/oferta.routes.js";
-import cuentaRouter from "./routes/cuenta.routes.js";
 import contactoRouter from "./routes/contacto.routes.js";
+import cuentaRouter from "./routes/cuenta.routes.js";
+import favoritoRouter from "./routes/favorito.routes.js";
+import notificacionRouter from "./routes/notificacion.routes.js";
+import ofertaRouter from "./routes/oferta.routes.js";
+import mensajeRouter from "./routes/mensaje.routes.js";
 
 const app = express();
 
@@ -56,5 +58,7 @@ app.use("/api/favoritos", favoritoRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/ofertas", ofertaRouter);
 app.use("/api/cuenta", cuentaRouter);
-app.use("/api/contactos",contactoRouter,);
+app.use("/api/contactos", contactoRouter);
+app.use("/api/notificaciones",notificacionRouter,);
+app.use("/api/mensajes",mensajeRouter,);
 export default app;

@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.buscarArticulosEnBaseDeDatos = buscarArticulosEnBaseDeDatos;
+exports.obtenerArticulosPorVendedorId = obtenerArticulosPorVendedorId;
 exports.obtenerArticuloPorIdEnBaseDeDatos = obtenerArticuloPorIdEnBaseDeDatos;
 exports.crearArticuloEnBaseDeDatos = crearArticuloEnBaseDeDatos;
 exports.actualizarArticuloEnBaseDeDatos = actualizarArticuloEnBaseDeDatos;
@@ -16,6 +17,50 @@ async function buscarArticulosEnBaseDeDatos(termino, categoriaId) {
     return resultado[0].map((articulo) => ({
         ...articulo,
         archivado: Number(articulo.archivado ?? 0),
+    }));
+}
+async function obtenerArticulosPorVendedorId(vendedorId) {
+    const [filas] = await database_js_1.pool.execute(`
+      SELECT
+        a.articulo_id,
+        a.vendedor_id,
+        a.categoria_id,
+        a.titulo,
+        a.descripcion,
+        a.precio,
+        a.condicion,
+        a.ubicacion,
+        a.estado,
+        a.archivado,
+        a.fecha_publicacion,
+        c.nombre AS categoria,
+        CONCAT(
+          u.nombre,
+          ' ',
+          u.apellido
+        ) AS vendedor,
+        (
+          SELECT ia.url_imagen
+          FROM imagenes_articulos ia
+          WHERE ia.articulo_id = a.articulo_id
+          ORDER BY
+            ia.es_principal DESC,
+            ia.orden ASC,
+            ia.imagen_id ASC
+          LIMIT 1
+        ) AS imagen_principal
+      FROM articulos a
+      INNER JOIN categorias c
+        ON c.categoria_id = a.categoria_id
+      INNER JOIN usuarios u
+        ON u.usuario_id = a.vendedor_id
+      WHERE a.vendedor_id = ?
+      ORDER BY a.fecha_publicacion DESC
+    `, [vendedorId]);
+    return filas.map((articulo) => ({
+        ...articulo,
+        archivado: Number(articulo.archivado ?? 0),
+        imagenes: [],
     }));
 }
 async function obtenerArticuloPorIdEnBaseDeDatos(articuloId) {
@@ -243,7 +288,9 @@ async function eliminarImagenArticuloEnBaseDeDatos(articuloId, urlImagen) {
             UPDATE imagenes_articulos
             SET es_principal = 1
             WHERE imagen_id = ?
-          `, [nuevaPrincipal.imagen_id]);
+          `, [
+                    nuevaPrincipal.imagen_id,
+                ]);
             }
         }
         await conexion.execute(`

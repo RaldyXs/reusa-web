@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.buscarArticulos = buscarArticulos;
+exports.obtenerMisArticulos = obtenerMisArticulos;
 exports.obtenerArticuloPorId = obtenerArticuloPorId;
 exports.crearArticulo = crearArticulo;
 exports.actualizarArticulo = actualizarArticulo;
@@ -12,6 +13,14 @@ function convertirArticuloId(articuloId) {
     if (!Number.isInteger(idConvertido) ||
         idConvertido < 1) {
         throw new Error("El identificador del artículo no es válido");
+    }
+    return idConvertido;
+}
+function convertirVendedorId(vendedorId) {
+    const idConvertido = Number(vendedorId);
+    if (!Number.isInteger(idConvertido) ||
+        idConvertido < 1) {
+        throw new Error("El identificador del vendedor no es válido");
     }
     return idConvertido;
 }
@@ -72,6 +81,10 @@ async function buscarArticulos(termino, categoriaId) {
             numeroCategoria;
     }
     return (0, articulo_repository_js_1.buscarArticulosEnBaseDeDatos)(terminoLimpio, categoriaConvertida);
+}
+async function obtenerMisArticulos(vendedorId) {
+    const idConvertido = convertirVendedorId(vendedorId);
+    return (0, articulo_repository_js_1.obtenerArticulosPorVendedorId)(idConvertido);
 }
 async function obtenerArticuloPorId(articuloId) {
     const idConvertido = convertirArticuloId(articuloId);

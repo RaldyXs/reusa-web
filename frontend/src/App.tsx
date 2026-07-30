@@ -1,4 +1,7 @@
-import type { ComponentType, ReactNode } from "react";
+import type {
+  ComponentType,
+  ReactNode,
+} from "react";
 import {
   BrowserRouter,
   Navigate,
@@ -12,10 +15,12 @@ import ProtectedRoute from "./components/auth/ProtectedRoute";
 import { AuthProvider } from "./contexts/AuthContext";
 import AdminLayout from "./layouts/AdminLayout.tsx";
 import MainLayout from "./layouts/MainLayout";
+
 import Categories from "./pages/Categories";
 import EditPublication from "./pages/EditPublication";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
+import Messages from "./pages/Messages";
 import MyProducts from "./pages/MyProducts";
 import ProductDetail from "./pages/ProductDetail";
 import Publish from "./pages/Publish";
@@ -25,12 +30,17 @@ import SalesHistory from "./pages/SalesHistory";
 import Saved from "./pages/Saved";
 import SearchResults from "./pages/SearchResults";
 import Settings from "./pages/Settings";
+
 import AdminCategories from "./pages/admin/AdminCategories.tsx";
 import AdminDashboard from "./pages/admin/AdminDashboard.tsx";
+import AdminOffers from "./pages/admin/AdminOffers.tsx";
 import AdminPublications from "./pages/admin/AdminPublications.tsx";
 import AdminUsers from "./pages/admin/AdminUsers.tsx";
 
-const MainLayoutWithChildren = MainLayout as ComponentType<{ children?: ReactNode }>;
+const MainLayoutWithChildren =
+  MainLayout as ComponentType<{
+    children?: ReactNode;
+  }>;
 
 interface ConLayoutProps {
   children: ReactNode;
@@ -39,7 +49,11 @@ interface ConLayoutProps {
 function ConLayout({
   children,
 }: ConLayoutProps) {
-  return <MainLayoutWithChildren>{children}</MainLayoutWithChildren>;
+  return (
+    <MainLayoutWithChildren>
+      {children}
+    </MainLayoutWithChildren>
+  );
 }
 
 function App() {
@@ -99,6 +113,17 @@ function App() {
               <ProtectedRoute>
                 <ConLayout>
                   <Saved />
+                </ConLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/mensajes"
+            element={
+              <ProtectedRoute>
+                <ConLayout>
+                  <Messages />
                 </ConLayout>
               </ProtectedRoute>
             }
@@ -194,29 +219,47 @@ function App() {
           >
             <Route
               index
-              element={<AdminDashboard />}
+              element={
+                <AdminDashboard />
+              }
             />
 
             <Route
               path="usuarios"
-              element={<AdminUsers />}
+              element={
+                <AdminUsers />
+              }
             />
 
             <Route
               path="publicaciones"
-              element={<AdminPublications />}
+              element={
+                <AdminPublications />
+              }
+            />
+
+            <Route
+              path="ofertas"
+              element={
+                <AdminOffers />
+              }
             />
 
             <Route
               path="categorias"
-              element={<AdminCategories />}
+              element={
+                <AdminCategories />
+              }
             />
           </Route>
 
           <Route
             path="*"
             element={
-              <Navigate to="/" replace />
+              <Navigate
+                to="/"
+                replace
+              />
             }
           />
         </Routes>

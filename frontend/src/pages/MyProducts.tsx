@@ -7,6 +7,7 @@ import {
   Plus,
   RotateCcw,
   Tag,
+  Trash2,
 } from "lucide-react";
 import {
   useEffect,
@@ -20,6 +21,7 @@ import type { Articulo } from "../interfaces/articulo";
 import {
   actualizarArchivadoArticulo,
   actualizarEstadoArticulo,
+  eliminarArticulo,
   obtenerMisArticulos,
   type EstadoArticulo,
 } from "../services/articuloService";
@@ -43,15 +45,23 @@ function MyProducts() {
   const [cargando, setCargando] =
     useState(true);
 
-  const [error, setError] = useState("");
+  const [error, setError] =
+    useState("");
 
-  const [articuloProcesando, setArticuloProcesando] =
-    useState<number | null>(null);
+  const [
+    mensajeExito,
+    setMensajeExito,
+  ] = useState("");
+
+  const [
+    articuloProcesando,
+    setArticuloProcesando,
+  ] = useState<number | null>(null);
 
   useEffect(() => {
     let componenteActivo = true;
 
-    async function cargarPublicaciones() {
+    async function cargarPublicaciones(): Promise<void> {
       try {
         setCargando(true);
         setError("");
@@ -100,6 +110,7 @@ function MyProducts() {
   ): Promise<void> {
     try {
       setError("");
+      setMensajeExito("");
       setArticuloProcesando(articuloId);
 
       const articuloActualizado =
@@ -132,6 +143,7 @@ function MyProducts() {
   ): Promise<void> {
     try {
       setError("");
+      setMensajeExito("");
       setArticuloProcesando(articuloId);
 
       const articuloActualizado =
@@ -152,6 +164,51 @@ function MyProducts() {
         errorDesconocido instanceof Error
           ? errorDesconocido.message
           : "No se pudo archivar la publicación",
+      );
+    } finally {
+      setArticuloProcesando(null);
+    }
+  }
+
+  async function manejarEliminacion(
+    articuloId: number,
+    titulo: string,
+  ): Promise<void> {
+    const confirmado = window.confirm(
+      `¿Deseas eliminar la publicación "${titulo}"?\n\n` +
+        "Desaparecerá de tu perfil y del marketplace, pero permanecerá registrada como eliminada en la base de datos.",
+    );
+
+    if (!confirmado) {
+      return;
+    }
+
+    try {
+      setError("");
+      setMensajeExito("");
+      setArticuloProcesando(articuloId);
+
+      await eliminarArticulo(
+        articuloId,
+      );
+
+      setArticulos(
+        (articulosActuales) =>
+          articulosActuales.filter(
+            (articulo) =>
+              articulo.articulo_id !==
+              articuloId,
+          ),
+      );
+
+      setMensajeExito(
+        "Publicación eliminada correctamente",
+      );
+    } catch (errorDesconocido) {
+      setError(
+        errorDesconocido instanceof Error
+          ? errorDesconocido.message
+          : "No se pudo eliminar la publicación",
       );
     } finally {
       setArticuloProcesando(null);
@@ -182,7 +239,9 @@ function MyProducts() {
         (articulo) =>
           (articulo.estado ?? "activo") ===
             "activo" &&
-          Number(articulo.archivado ?? 0) === 0,
+          Number(
+            articulo.archivado ?? 0,
+          ) === 0,
       );
     }
 
@@ -190,20 +249,26 @@ function MyProducts() {
       return articulos.filter(
         (articulo) =>
           articulo.estado === "vendido" &&
-          Number(articulo.archivado ?? 0) === 0,
+          Number(
+            articulo.archivado ?? 0,
+          ) === 0,
       );
     }
 
     if (filtro === "archivadas") {
       return articulos.filter(
         (articulo) =>
-          Number(articulo.archivado ?? 0) === 1,
+          Number(
+            articulo.archivado ?? 0,
+          ) === 1,
       );
     }
 
     return articulos.filter(
       (articulo) =>
-        Number(articulo.archivado ?? 0) === 0,
+        Number(
+          articulo.archivado ?? 0,
+        ) === 0,
     );
   }, [articulos, filtro]);
 
@@ -223,7 +288,9 @@ function MyProducts() {
 
         <button
           type="button"
-          onClick={() => navigate("/publicar")}
+          onClick={() =>
+            navigate("/publicar")
+          }
         >
           <Plus size={18} />
           Nueva publicación
@@ -235,7 +302,10 @@ function MyProducts() {
           <Package size={20} />
 
           <div>
-            <strong>{articulos.length}</strong>
+            <strong>
+              {articulos.length}
+            </strong>
+
             <span>Total</span>
           </div>
         </article>
@@ -262,7 +332,10 @@ function MyProducts() {
           <Archive size={20} />
 
           <div>
-            <strong>{archivadas}</strong>
+            <strong>
+              {archivadas}
+            </strong>
+
             <span>Archivadas</span>
           </div>
         </article>
@@ -272,9 +345,13 @@ function MyProducts() {
         <button
           type="button"
           className={
-            filtro === "todas" ? "active" : ""
+            filtro === "todas"
+              ? "active"
+              : ""
           }
-          onClick={() => setFiltro("todas")}
+          onClick={() =>
+            setFiltro("todas")
+          }
         >
           Todas
         </button>
@@ -282,9 +359,13 @@ function MyProducts() {
         <button
           type="button"
           className={
-            filtro === "activas" ? "active" : ""
+            filtro === "activas"
+              ? "active"
+              : ""
           }
-          onClick={() => setFiltro("activas")}
+          onClick={() =>
+            setFiltro("activas")
+          }
         >
           Activas
         </button>
@@ -292,9 +373,13 @@ function MyProducts() {
         <button
           type="button"
           className={
-            filtro === "vendidas" ? "active" : ""
+            filtro === "vendidas"
+              ? "active"
+              : ""
           }
-          onClick={() => setFiltro("vendidas")}
+          onClick={() =>
+            setFiltro("vendidas")
+          }
         >
           Vendidas
         </button>
@@ -306,20 +391,33 @@ function MyProducts() {
               ? "active"
               : ""
           }
-          onClick={() => setFiltro("archivadas")}
+          onClick={() =>
+            setFiltro("archivadas")
+          }
         >
           Archivadas
         </button>
       </div>
 
-      {error ? (
+      {error && (
         <div
           className="error-message"
           role="alert"
         >
           {error}
         </div>
-      ) : cargando ? (
+      )}
+
+      {mensajeExito && (
+        <div
+          className="success-message"
+          role="status"
+        >
+          {mensajeExito}
+        </div>
+      )}
+
+      {cargando ? (
         <p className="status-message">
           Cargando tus publicaciones...
         </p>
@@ -338,12 +436,15 @@ function MyProducts() {
 
           <button
             type="button"
-            onClick={() => navigate("/publicar")}
+            onClick={() =>
+              navigate("/publicar")
+            }
           >
             Crear publicación
           </button>
         </div>
-      ) : articulosVisibles.length === 0 ? (
+      ) : articulosVisibles.length ===
+        0 ? (
         <div className="my-products-empty">
           <Package size={38} />
 
@@ -358,168 +459,229 @@ function MyProducts() {
         </div>
       ) : (
         <div className="my-products-grid">
-          {articulosVisibles.map((articulo) => {
-            const precio = Number(
-              articulo.precio,
-            ).toLocaleString("es-DO", {
-              style: "currency",
-              currency: "DOP",
-              maximumFractionDigits: 0,
-            });
+          {articulosVisibles.map(
+            (articulo) => {
+              const precio = Number(
+                articulo.precio,
+              ).toLocaleString(
+                "es-DO",
+                {
+                  style: "currency",
+                  currency: "DOP",
+                  maximumFractionDigits: 0,
+                },
+              );
 
-            const estadoActual =
-              articulo.estado ?? "activo";
+              const estadoActual =
+                articulo.estado ??
+                "activo";
 
-            const estaActivo =
-              estadoActual === "activo";
+              const estaActivo =
+                estadoActual ===
+                "activo";
 
-            const estaVendido =
-              estadoActual === "vendido";
+              const estaVendido =
+                estadoActual ===
+                "vendido";
 
-            const estaArchivado =
-              Number(
-                articulo.archivado ?? 0,
-              ) === 1;
+              const estaArchivado =
+                Number(
+                  articulo.archivado ??
+                    0,
+                ) === 1;
 
-            const estaProcesando =
-              articuloProcesando ===
-              articulo.articulo_id;
+              const estaProcesando =
+                articuloProcesando ===
+                articulo.articulo_id;
 
-            const textoEstado = estaArchivado
-              ? estadoActual === "vendido"
-                ? "Vendido · Archivado"
-                : "Activo · Archivado"
-              : estadoActual;
+              const textoEstado =
+                estaArchivado
+                  ? estadoActual ===
+                    "vendido"
+                    ? "Vendido · Archivado"
+                    : "Activo · Archivado"
+                  : estadoActual;
 
-            return (
-              <article
-                className="my-product-card"
-                key={articulo.articulo_id}
-              >
-                <div className="my-product-card__image">
-                  {articulo.imagen_principal ? (
-                    <img
-                      src={
-                        articulo.imagen_principal
-                      }
-                      alt={articulo.titulo}
-                    />
-                  ) : (
-                    <span>{articulo.titulo}</span>
-                  )}
+              return (
+                <article
+                  className="my-product-card"
+                  key={
+                    articulo.articulo_id
+                  }
+                >
+                  <div className="my-product-card__image">
+                    {articulo.imagen_principal ? (
+                      <img
+                        src={
+                          articulo.imagen_principal
+                        }
+                        alt={
+                          articulo.titulo
+                        }
+                      />
+                    ) : (
+                      <span>
+                        {articulo.titulo}
+                      </span>
+                    )}
 
-                  <small
-                    className={`my-product-card__status my-product-card__status--${estaArchivado ? "archivado" : estadoActual}`}
-                  >
-                    {textoEstado}
-                  </small>
-                </div>
-
-                <div className="my-product-card__content">
-                  <span>
-                    {articulo.categoria}
-                  </span>
-
-                  <h2>{articulo.titulo}</h2>
-
-                  <strong>{precio}</strong>
-
-                  <div className="my-product-card__actions">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        navigate(
-                          `/producto/${articulo.articulo_id}`,
-                        )
-                      }
-                    >
-                      <Eye size={16} />
-                      Ver
-                    </button>
-
-                    <button
-                      type="button"
-                      disabled={
-                        estaProcesando ||
+                    <small
+                      className={`my-product-card__status my-product-card__status--${
                         estaArchivado
-                      }
-                      onClick={() =>
-                        navigate(
-                          `/editar-publicacion/${articulo.articulo_id}`,
-                        )
-                      }
+                          ? "archivado"
+                          : estadoActual
+                      }`}
                     >
-                      <Pencil size={16} />
-                      Editar
-                    </button>
-
-                    {!estaArchivado &&
-                      estaActivo && (
-                        <button
-                          type="button"
-                          disabled={estaProcesando}
-                          onClick={() =>
-                            void cambiarEstado(
-                              articulo.articulo_id,
-                              "vendido",
-                            )
-                          }
-                        >
-                          <CheckCircle2 size={16} />
-
-                          {estaProcesando
-                            ? "Guardando..."
-                            : "Marcar vendido"}
-                        </button>
-                      )}
-
-                    {!estaArchivado &&
-                      estaVendido && (
-                        <button
-                          type="button"
-                          disabled={estaProcesando}
-                          onClick={() =>
-                            void cambiarEstado(
-                              articulo.articulo_id,
-                              "activo",
-                            )
-                          }
-                        >
-                          <RotateCcw size={16} />
-
-                          {estaProcesando
-                            ? "Guardando..."
-                            : "Volver a activar"}
-                        </button>
-                      )}
-
-                    <button
-                      type="button"
-                      disabled={estaProcesando}
-                      onClick={() =>
-                        void cambiarArchivado(
-                          articulo.articulo_id,
-                          !estaArchivado,
-                        )
-                      }
-                    >
-                      {estaArchivado ? (
-                        <RotateCcw size={16} />
-                      ) : (
-                        <Archive size={16} />
-                      )}
-
-                      {estaProcesando
-                        ? "Guardando..."
-                        : estaArchivado
-                          ? "Desarchivar"
-                          : "Archivar"}
-                    </button>
+                      {textoEstado}
+                    </small>
                   </div>
-                </div>
-              </article>
-            );
-          })}
+
+                  <div className="my-product-card__content">
+                    <span>
+                      {articulo.categoria}
+                    </span>
+
+                    <h2>
+                      {articulo.titulo}
+                    </h2>
+
+                    <strong>
+                      {precio}
+                    </strong>
+
+                    <div className="my-product-card__actions">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          navigate(
+                            `/producto/${articulo.articulo_id}`,
+                          )
+                        }
+                      >
+                        <Eye size={16} />
+                        Ver
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={
+                          estaProcesando ||
+                          estaArchivado
+                        }
+                        onClick={() =>
+                          navigate(
+                            `/editar-publicacion/${articulo.articulo_id}`,
+                          )
+                        }
+                      >
+                        <Pencil
+                          size={16}
+                        />
+                        Editar
+                      </button>
+
+                      {!estaArchivado &&
+                        estaActivo && (
+                          <button
+                            type="button"
+                            disabled={
+                              estaProcesando
+                            }
+                            onClick={() =>
+                              void cambiarEstado(
+                                articulo.articulo_id,
+                                "vendido",
+                              )
+                            }
+                          >
+                            <CheckCircle2
+                              size={16}
+                            />
+
+                            {estaProcesando
+                              ? "Guardando..."
+                              : "Marcar vendido"}
+                          </button>
+                        )}
+
+                      {!estaArchivado &&
+                        estaVendido && (
+                          <button
+                            type="button"
+                            disabled={
+                              estaProcesando
+                            }
+                            onClick={() =>
+                              void cambiarEstado(
+                                articulo.articulo_id,
+                                "activo",
+                              )
+                            }
+                          >
+                            <RotateCcw
+                              size={16}
+                            />
+
+                            {estaProcesando
+                              ? "Guardando..."
+                              : "Volver a activar"}
+                          </button>
+                        )}
+
+                      <button
+                        type="button"
+                        disabled={
+                          estaProcesando
+                        }
+                        onClick={() =>
+                          void cambiarArchivado(
+                            articulo.articulo_id,
+                            !estaArchivado,
+                          )
+                        }
+                      >
+                        {estaArchivado ? (
+                          <RotateCcw
+                            size={16}
+                          />
+                        ) : (
+                          <Archive
+                            size={16}
+                          />
+                        )}
+
+                        {estaProcesando
+                          ? "Guardando..."
+                          : estaArchivado
+                            ? "Desarchivar"
+                            : "Archivar"}
+                      </button>
+
+                      <button
+                        className="my-product-card__delete-button"
+                        type="button"
+                        disabled={
+                          estaProcesando
+                        }
+                        onClick={() =>
+                          void manejarEliminacion(
+                            articulo.articulo_id,
+                            articulo.titulo,
+                          )
+                        }
+                      >
+                        <Trash2 size={16} />
+
+                        {estaProcesando
+                          ? "Eliminando..."
+                          : "Eliminar"}
+                      </button>
+                    </div>
+                  </div>
+                </article>
+              );
+            },
+          )}
         </div>
       )}
     </section>

@@ -14,6 +14,7 @@ import {
   obtenerCategoriaAdministracionPorIdDesdeBaseDeDatos,
   obtenerCategoriaAdministracionPorNombreDesdeBaseDeDatos,
   obtenerCategoriasAdministracionDesdeBaseDeDatos,
+  obtenerOfertasAdministracionDesdeBaseDeDatos,
   obtenerPublicacionAdministracionPorIdDesdeBaseDeDatos,
   obtenerPublicacionesAdministracionDesdeBaseDeDatos,
   obtenerPublicacionesPorCategoriaDesdeBaseDeDatos,
@@ -24,6 +25,7 @@ import {
   obtenerUsuariosAdministracionDesdeBaseDeDatos,
   obtenerUsuariosPorMesDesdeBaseDeDatos,
   type CategoriaAdministracion,
+  type OfertaAdministracion,
 } from "../repositories/admin.repository.js";
 
 type EstadoPublicacionAdministracion =
@@ -63,7 +65,9 @@ function validarCategoria(
   descripcion: string | null;
 } {
   const nombre =
-    normalizarNombreCategoria(datos.nombre);
+    normalizarNombreCategoria(
+      datos.nombre,
+    );
 
   const descripcion =
     normalizarDescripcionCategoria(
@@ -119,11 +123,15 @@ export async function obtenerEstadisticasDashboardAdministracion(): Promise<
   ]);
 
   return {
-    usuarios_por_mes: usuariosPorMes,
+    usuarios_por_mes:
+      usuariosPorMes,
+
     publicaciones_por_mes:
       publicacionesPorMes,
+
     publicaciones_por_estado:
       publicacionesPorEstado,
+
     publicaciones_por_categoria:
       publicacionesPorCategoria,
   };
@@ -150,7 +158,9 @@ export async function cambiarEstadoUsuarioAdministracion(
   }
 
   if (
-    !Number.isInteger(administradorId) ||
+    !Number.isInteger(
+      administradorId,
+    ) ||
     administradorId <= 0
   ) {
     throw new Error(
@@ -223,6 +233,12 @@ export async function obtenerPublicacionesAdministracion(): Promise<
   return obtenerPublicacionesAdministracionDesdeBaseDeDatos();
 }
 
+export async function obtenerOfertasAdministracion(): Promise<
+  OfertaAdministracion[]
+> {
+  return obtenerOfertasAdministracionDesdeBaseDeDatos();
+}
+
 export async function cambiarEstadoPublicacionAdministracion(
   articuloId: number,
   estado: EstadoPublicacionAdministracion,
@@ -243,7 +259,11 @@ export async function cambiarEstadoPublicacionAdministracion(
       "archivado",
     ];
 
-  if (!estadosPermitidos.includes(estado)) {
+  if (
+    !estadosPermitidos.includes(
+      estado,
+    )
+  ) {
     throw new Error(
       "El estado de la publicación no es válido",
     );
@@ -262,8 +282,14 @@ export async function cambiarEstadoPublicacionAdministracion(
 
   const yaTieneEseEstado =
     publicacion.estado === estado &&
-    Number(publicacion.archivado) ===
-      (estado === "archivado" ? 1 : 0);
+    Number(
+      publicacion.archivado,
+    ) ===
+      (
+        estado === "archivado"
+          ? 1
+          : 0
+      );
 
   if (yaTieneEseEstado) {
     return publicacion;
@@ -388,7 +414,10 @@ export async function actualizarCategoriaAdministracion(
   const mismosDatos =
     categoriaActual.nombre ===
       categoriaValidada.nombre &&
-    (categoriaActual.descripcion ?? null) ===
+    (
+      categoriaActual.descripcion ??
+      null
+    ) ===
       categoriaValidada.descripcion;
 
   if (mismosDatos) {

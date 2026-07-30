@@ -19,10 +19,17 @@ export interface Oferta {
   oferta_id: number;
   comprador_id: number;
   articulo_id: number;
+
   precio_ofertado: number | string;
+  precio_contraoferta?: number | string | null;
+
   mensaje: string | null;
+  mensaje_contraoferta?: string | null;
+
   estado: EstadoOferta;
+
   fecha_oferta: string;
+  fecha_respuesta?: string | null;
 
   articulo_titulo?: string;
   articulo_precio?: number | string;
@@ -170,6 +177,56 @@ export async function responderOferta(
     throw new Error(
       respuesta.message ??
         "No se pudo responder la oferta",
+    );
+  }
+}
+
+export async function crearContraoferta(
+  ofertaId: number,
+  precioContraoferta: number,
+  mensajeContraoferta: string,
+): Promise<void> {
+  const respuesta =
+    await solicitarApi<RespuestaGenerica>(
+      `${API_URL}/${ofertaId}/contraoferta`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({
+          precioContraoferta,
+          mensajeContraoferta,
+        }),
+      },
+      true,
+    );
+
+  if (!respuesta.ok) {
+    throw new Error(
+      respuesta.message ??
+        "No se pudo enviar la contraoferta",
+    );
+  }
+}
+
+export async function responderContraoferta(
+  ofertaId: number,
+  aceptar: boolean,
+): Promise<void> {
+  const respuesta =
+    await solicitarApi<RespuestaGenerica>(
+      `${API_URL}/${ofertaId}/responder-contraoferta`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({
+          aceptar,
+        }),
+      },
+      true,
+    );
+
+  if (!respuesta.ok) {
+    throw new Error(
+      respuesta.message ??
+        "No se pudo responder la contraoferta",
     );
   }
 }

@@ -53,6 +53,35 @@ export interface PublicacionAdministracion {
   vendedor_email: string;
 }
 
+export interface OfertaAdministracion {
+  oferta_id: number;
+
+  articulo_id: number;
+  articulo_titulo: string;
+  precio_publicacion: number;
+  estado_articulo: string;
+  articulo_archivado: number;
+  articulo_eliminado: number;
+
+  comprador_id: number;
+  comprador_nombre: string;
+  comprador_email: string;
+
+  vendedor_id: number;
+  vendedor_nombre: string;
+  vendedor_email: string;
+
+  precio_oferta: number;
+  mensaje: string | null;
+
+  precio_contraoferta: number | null;
+  mensaje_contraoferta: string | null;
+
+  estado: string;
+  fecha_oferta: string;
+  fecha_respuesta: string | null;
+}
+
 export interface CategoriaAdministracion {
   categoria_id: number;
   nombre: string;
@@ -135,6 +164,12 @@ interface RespuestaEstadoPublicacion {
   publicacion?: PublicacionAdministracion;
 }
 
+interface RespuestaOfertas {
+  ok: boolean;
+  ofertas?: OfertaAdministracion[];
+  message?: string;
+}
+
 interface RespuestaCategorias {
   ok: boolean;
   categorias?: CategoriaAdministracion[];
@@ -154,12 +189,15 @@ interface OpcionesSolicitud {
     | "PATCH"
     | "PUT"
     | "DELETE";
+
   body?: unknown;
 }
 
 function obtenerToken(): string {
   const sesionGuardada =
-    localStorage.getItem(CLAVE_SESION);
+    localStorage.getItem(
+      CLAVE_SESION,
+    );
 
   if (!sesionGuardada) {
     throw new Error(
@@ -169,7 +207,9 @@ function obtenerToken(): string {
 
   try {
     const sesion =
-      JSON.parse(sesionGuardada) as Sesion;
+      JSON.parse(
+        sesionGuardada,
+      ) as Sesion;
 
     if (!sesion.token) {
       throw new Error();
@@ -187,12 +227,17 @@ async function solicitarAdministracion<T>(
   ruta: string,
   opciones: OpcionesSolicitud = {},
 ): Promise<T> {
-  const headers: Record<string, string> = {
+  const headers: Record<
+    string,
+    string
+  > = {
     Authorization:
       `Bearer ${obtenerToken()}`,
   };
 
-  if (opciones.body !== undefined) {
+  if (
+    opciones.body !== undefined
+  ) {
     headers["Content-Type"] =
       "application/json";
   }
@@ -200,21 +245,30 @@ async function solicitarAdministracion<T>(
   const response = await fetch(
     `${API_URL}/admin/${ruta}`,
     {
-      method: opciones.method ?? "GET",
+      method:
+        opciones.method ?? "GET",
+
       headers,
+
       body:
         opciones.body !== undefined
-          ? JSON.stringify(opciones.body)
+          ? JSON.stringify(
+              opciones.body,
+            )
           : undefined,
     },
   );
 
-  const datos = (await response.json()) as {
-    ok: boolean;
-    message?: string;
-  };
+  const datos =
+    (await response.json()) as {
+      ok: boolean;
+      message?: string;
+    };
 
-  if (!response.ok || !datos.ok) {
+  if (
+    !response.ok ||
+    !datos.ok
+  ) {
     throw new Error(
       datos.message ??
         "No se pudo completar la solicitud",
@@ -266,7 +320,9 @@ export async function obtenerUsuariosAdmin(): Promise<
       "usuarios",
     );
 
-  return Array.isArray(respuesta.usuarios)
+  return Array.isArray(
+    respuesta.usuarios,
+  )
     ? respuesta.usuarios
     : [];
 }
@@ -280,6 +336,7 @@ export async function cambiarEstadoUsuarioAdmin(
       `usuarios/${usuarioId}/estado`,
       {
         method: "PATCH",
+
         body: {
           activo,
         },
@@ -319,6 +376,7 @@ export async function cambiarEstadoPublicacionAdmin(
       `publicaciones/${articuloId}/estado`,
       {
         method: "PATCH",
+
         body: {
           estado,
         },
@@ -334,6 +392,21 @@ export async function cambiarEstadoPublicacionAdmin(
   return respuesta.publicacion;
 }
 
+export async function obtenerOfertasAdmin(): Promise<
+  OfertaAdministracion[]
+> {
+  const respuesta =
+    await solicitarAdministracion<RespuestaOfertas>(
+      "ofertas",
+    );
+
+  return Array.isArray(
+    respuesta.ofertas,
+  )
+    ? respuesta.ofertas
+    : [];
+}
+
 export async function obtenerCategoriasAdmin(): Promise<
   CategoriaAdministracion[]
 > {
@@ -342,7 +415,9 @@ export async function obtenerCategoriasAdmin(): Promise<
       "categorias",
     );
 
-  return Array.isArray(respuesta.categorias)
+  return Array.isArray(
+    respuesta.categorias,
+  )
     ? respuesta.categorias
     : [];
 }
@@ -399,6 +474,7 @@ export async function cambiarEstadoCategoriaAdmin(
       `categorias/${categoriaId}/estado`,
       {
         method: "PATCH",
+
         body: {
           activo,
         },

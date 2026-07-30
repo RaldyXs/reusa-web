@@ -11,6 +11,7 @@ import {
   crearCategoriaAdministracion,
   obtenerCategoriasAdministracion,
   obtenerEstadisticasDashboardAdministracion,
+  obtenerOfertasAdministracion,
   obtenerPublicacionesAdministracion,
   obtenerResumenAdministracion,
   obtenerUsuariosAdministracion,
@@ -246,6 +247,32 @@ export async function obtenerPublicacionesAdmin(
       ok: false,
       message:
         "No se pudieron obtener las publicaciones",
+    });
+  }
+}
+
+export async function obtenerOfertasAdmin(
+  _request: Request,
+  response: Response,
+): Promise<void> {
+  try {
+    const ofertas =
+      await obtenerOfertasAdministracion();
+
+    response.status(200).json({
+      ok: true,
+      ofertas,
+    });
+  } catch (errorDesconocido) {
+    console.error(
+      "Error al obtener las ofertas administrativas:",
+      errorDesconocido,
+    );
+
+    response.status(500).json({
+      ok: false,
+      message:
+        "No se pudieron obtener las ofertas",
     });
   }
 }

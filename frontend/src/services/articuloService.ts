@@ -1,8 +1,11 @@
 import type { Articulo } from "../interfaces/articulo";
 import type { Sesion } from "../interfaces/auth";
 
-const API_URL = "http://localhost:3000/api/articulos";
-const CLAVE_SESION = "reusa_sesion";
+const API_URL =
+  "http://localhost:3000/api/articulos";
+
+const CLAVE_SESION =
+  "reusa_sesion";
 
 interface ArticulosResponse {
   ok: boolean;
@@ -24,11 +27,19 @@ interface SubirImagenesResponse {
   message?: string;
 }
 
+interface RespuestaGenerica {
+  ok: boolean;
+  message?: string;
+}
+
 export interface CrearArticuloDatos {
   titulo: string;
   descripcion: string;
   precio: number;
-  condicion: "nuevo" | "usado" | "reparado";
+  condicion:
+    | "nuevo"
+    | "usado"
+    | "reparado";
   ubicacion: string;
   categoriaId: number;
 }
@@ -37,7 +48,10 @@ export interface ActualizarArticuloDatos {
   titulo: string;
   descripcion: string;
   precio: number;
-  condicion: "nuevo" | "usado" | "reparado";
+  condicion:
+    | "nuevo"
+    | "usado"
+    | "reparado";
   ubicacion: string;
   categoriaId: number;
 }
@@ -48,7 +62,9 @@ export type EstadoArticulo =
 
 function obtenerToken(): string {
   const sesionGuardada =
-    localStorage.getItem(CLAVE_SESION);
+    localStorage.getItem(
+      CLAVE_SESION,
+    );
 
   if (!sesionGuardada) {
     throw new Error(
@@ -58,7 +74,9 @@ function obtenerToken(): string {
 
   try {
     const sesion =
-      JSON.parse(sesionGuardada) as Sesion;
+      JSON.parse(
+        sesionGuardada,
+      ) as Sesion;
 
     if (!sesion.token) {
       throw new Error();
@@ -66,7 +84,9 @@ function obtenerToken(): string {
 
     return sesion.token;
   } catch {
-    localStorage.removeItem(CLAVE_SESION);
+    localStorage.removeItem(
+      CLAVE_SESION,
+    );
 
     throw new Error(
       "La sesión guardada no es válida. Inicia sesión nuevamente",
@@ -76,8 +96,10 @@ function obtenerToken(): string {
 
 function obtenerHeadersAutenticados(): HeadersInit {
   return {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${obtenerToken()}`,
+    "Content-Type":
+      "application/json",
+    Authorization:
+      `Bearer ${obtenerToken()}`,
   };
 }
 
@@ -94,20 +116,45 @@ async function leerRespuestaArticulo(
     !resultado.articulo
   ) {
     throw new Error(
-      resultado.message ?? mensajePredeterminado,
+      resultado.message ??
+        mensajePredeterminado,
     );
   }
 
   return resultado.articulo;
 }
 
-export async function obtenerArticulos(): Promise<Articulo[]> {
-  const response = await fetch(API_URL);
+async function leerRespuestaGenerica(
+  response: Response,
+  mensajePredeterminado: string,
+): Promise<void> {
+  const resultado =
+    (await response.json()) as RespuestaGenerica;
+
+  if (
+    !response.ok ||
+    !resultado.ok
+  ) {
+    throw new Error(
+      resultado.message ??
+        mensajePredeterminado,
+    );
+  }
+}
+
+export async function obtenerArticulos(): Promise<
+  Articulo[]
+> {
+  const response =
+    await fetch(API_URL);
 
   const data =
     (await response.json()) as ArticulosResponse;
 
-  if (!response.ok || !data.ok) {
+  if (
+    !response.ok ||
+    !data.ok
+  ) {
     throw new Error(
       data.message ??
         "No se pudieron obtener los artículos",
@@ -117,20 +164,27 @@ export async function obtenerArticulos(): Promise<Articulo[]> {
   return data.articulos;
 }
 
-export async function obtenerMisArticulos(): Promise<Articulo[]> {
-  const response = await fetch(
-    `${API_URL}/mios`,
-    {
-      headers: {
-        Authorization: `Bearer ${obtenerToken()}`,
+export async function obtenerMisArticulos(): Promise<
+  Articulo[]
+> {
+  const response =
+    await fetch(
+      `${API_URL}/mios`,
+      {
+        headers: {
+          Authorization:
+            `Bearer ${obtenerToken()}`,
+        },
       },
-    },
-  );
+    );
 
   const data =
     (await response.json()) as ArticulosResponse;
 
-  if (!response.ok || !data.ok) {
+  if (
+    !response.ok ||
+    !data.ok
+  ) {
     throw new Error(
       data.message ??
         "No se pudieron obtener tus publicaciones",
@@ -143,18 +197,26 @@ export async function obtenerMisArticulos(): Promise<Articulo[]> {
 export async function buscarArticulos(
   termino: string,
 ): Promise<Articulo[]> {
-  const parametros = new URLSearchParams();
+  const parametros =
+    new URLSearchParams();
 
-  parametros.set("termino", termino);
-
-  const response = await fetch(
-    `${API_URL}?${parametros.toString()}`,
+  parametros.set(
+    "termino",
+    termino,
   );
+
+  const response =
+    await fetch(
+      `${API_URL}?${parametros.toString()}`,
+    );
 
   const data =
     (await response.json()) as ArticulosResponse;
 
-  if (!response.ok || !data.ok) {
+  if (
+    !response.ok ||
+    !data.ok
+  ) {
     throw new Error(
       data.message ??
         "No se pudo realizar la búsqueda",
@@ -167,9 +229,10 @@ export async function buscarArticulos(
 export async function obtenerArticuloPorId(
   articuloId: number,
 ): Promise<Articulo> {
-  const response = await fetch(
-    `${API_URL}/${articuloId}`,
-  );
+  const response =
+    await fetch(
+      `${API_URL}/${articuloId}`,
+    );
 
   return leerRespuestaArticulo(
     response,
@@ -180,11 +243,18 @@ export async function obtenerArticuloPorId(
 export async function crearArticulo(
   datos: CrearArticuloDatos,
 ): Promise<Articulo> {
-  const response = await fetch(API_URL, {
-    method: "POST",
-    headers: obtenerHeadersAutenticados(),
-    body: JSON.stringify(datos),
-  });
+  const response =
+    await fetch(
+      API_URL,
+      {
+        method: "POST",
+        headers:
+          obtenerHeadersAutenticados(),
+        body: JSON.stringify(
+          datos,
+        ),
+      },
+    );
 
   return leerRespuestaArticulo(
     response,
@@ -196,14 +266,18 @@ export async function actualizarArticulo(
   articuloId: number,
   datos: ActualizarArticuloDatos,
 ): Promise<Articulo> {
-  const response = await fetch(
-    `${API_URL}/${articuloId}`,
-    {
-      method: "PUT",
-      headers: obtenerHeadersAutenticados(),
-      body: JSON.stringify(datos),
-    },
-  );
+  const response =
+    await fetch(
+      `${API_URL}/${articuloId}`,
+      {
+        method: "PUT",
+        headers:
+          obtenerHeadersAutenticados(),
+        body: JSON.stringify(
+          datos,
+        ),
+      },
+    );
 
   return leerRespuestaArticulo(
     response,
@@ -215,14 +289,18 @@ export async function actualizarEstadoArticulo(
   articuloId: number,
   estado: EstadoArticulo,
 ): Promise<Articulo> {
-  const response = await fetch(
-    `${API_URL}/${articuloId}/estado`,
-    {
-      method: "PATCH",
-      headers: obtenerHeadersAutenticados(),
-      body: JSON.stringify({ estado }),
-    },
-  );
+  const response =
+    await fetch(
+      `${API_URL}/${articuloId}/estado`,
+      {
+        method: "PATCH",
+        headers:
+          obtenerHeadersAutenticados(),
+        body: JSON.stringify({
+          estado,
+        }),
+      },
+    );
 
   return leerRespuestaArticulo(
     response,
@@ -234,14 +312,18 @@ export async function actualizarArchivadoArticulo(
   articuloId: number,
   archivado: boolean,
 ): Promise<Articulo> {
-  const response = await fetch(
-    `${API_URL}/${articuloId}/archivado`,
-    {
-      method: "PATCH",
-      headers: obtenerHeadersAutenticados(),
-      body: JSON.stringify({ archivado }),
-    },
-  );
+  const response =
+    await fetch(
+      `${API_URL}/${articuloId}/archivado`,
+      {
+        method: "PATCH",
+        headers:
+          obtenerHeadersAutenticados(),
+        body: JSON.stringify({
+          archivado,
+        }),
+      },
+    );
 
   return leerRespuestaArticulo(
     response,
@@ -251,36 +333,69 @@ export async function actualizarArchivadoArticulo(
   );
 }
 
+export async function eliminarArticulo(
+  articuloId: number,
+): Promise<void> {
+  const response =
+    await fetch(
+      `${API_URL}/${articuloId}`,
+      {
+        method: "DELETE",
+        headers:
+          obtenerHeadersAutenticados(),
+      },
+    );
+
+  await leerRespuestaGenerica(
+    response,
+    "No se pudo eliminar la publicación",
+  );
+}
+
 export async function subirImagenesArticulo(
   articuloId: number,
   archivos: File[],
 ): Promise<Articulo> {
-  if (archivos.length === 0) {
-    return obtenerArticuloPorId(articuloId);
+  if (
+    archivos.length === 0
+  ) {
+    return obtenerArticuloPorId(
+      articuloId,
+    );
   }
 
-  if (archivos.length > 5) {
+  if (
+    archivos.length > 5
+  ) {
     throw new Error(
       "Solo puedes subir un máximo de cinco imágenes",
     );
   }
 
-  const formulario = new FormData();
+  const formulario =
+    new FormData();
 
-  archivos.forEach((archivo) => {
-    formulario.append("imagenes", archivo);
-  });
-
-  const response = await fetch(
-    `${API_URL}/${articuloId}/imagenes`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${obtenerToken()}`,
-      },
-      body: formulario,
+  archivos.forEach(
+    (archivo) => {
+      formulario.append(
+        "imagenes",
+        archivo,
+      );
     },
   );
+
+  const response =
+    await fetch(
+      `${API_URL}/${articuloId}/imagenes`,
+      {
+        method: "POST",
+        headers: {
+          Authorization:
+            `Bearer ${obtenerToken()}`,
+        },
+        body: formulario,
+      },
+    );
 
   const resultado =
     (await response.json()) as SubirImagenesResponse;
@@ -303,14 +418,18 @@ export async function eliminarImagenArticulo(
   articuloId: number,
   urlImagen: string,
 ): Promise<Articulo> {
-  const response = await fetch(
-    `${API_URL}/${articuloId}/imagenes`,
-    {
-      method: "DELETE",
-      headers: obtenerHeadersAutenticados(),
-      body: JSON.stringify({ urlImagen }),
-    },
-  );
+  const response =
+    await fetch(
+      `${API_URL}/${articuloId}/imagenes`,
+      {
+        method: "DELETE",
+        headers:
+          obtenerHeadersAutenticados(),
+        body: JSON.stringify({
+          urlImagen,
+        }),
+      },
+    );
 
   return leerRespuestaArticulo(
     response,

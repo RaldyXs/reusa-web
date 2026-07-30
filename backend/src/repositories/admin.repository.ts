@@ -23,6 +23,36 @@ export interface CategoriaAdministracion
   fecha_creacion: string;
 }
 
+export interface OfertaAdministracion
+  extends RowDataPacket {
+  oferta_id: number;
+
+  articulo_id: number;
+  articulo_titulo: string;
+  precio_publicacion: number;
+  estado_articulo: string;
+  articulo_archivado: number;
+  articulo_eliminado: number;
+
+  comprador_id: number;
+  comprador_nombre: string;
+  comprador_email: string;
+
+  vendedor_id: number;
+  vendedor_nombre: string;
+  vendedor_email: string;
+
+  precio_oferta: number;
+  mensaje: string | null;
+
+  precio_contraoferta: number | null;
+  mensaje_contraoferta: string | null;
+
+  estado: string;
+  fecha_oferta: string;
+  fecha_respuesta: string | null;
+}
+
 export interface CrearCategoriaAdministracionDatos {
   nombre: string;
   descripcion: string | null;
@@ -63,19 +93,24 @@ export async function obtenerResumenAdministracionDesdeBaseDeDatos(): Promise<
             FROM articulos
             WHERE estado = 'activo'
               AND archivado = 0
+              AND eliminado = 0
           ) AS publicaciones_activas,
 
           (
             SELECT COUNT(*)
             FROM articulos
             WHERE estado = 'vendido'
+              AND eliminado = 0
           ) AS publicaciones_vendidas,
 
           (
             SELECT COUNT(*)
             FROM articulos
-            WHERE estado = 'archivado'
-               OR archivado = 1
+            WHERE (
+              estado = 'archivado'
+              OR archivado = 1
+            )
+            AND eliminado = 0
           ) AS publicaciones_archivadas,
 
           (
@@ -267,6 +302,7 @@ export async function actualizarEstadoPublicacionDesdeBaseDeDatos(
           estado = ?,
           archivado = ?
         WHERE articulo_id = ?
+          AND eliminado = 0
       `,
       [
         estado,
@@ -276,6 +312,81 @@ export async function actualizarEstadoPublicacionDesdeBaseDeDatos(
     );
 
   return resultado.affectedRows > 0;
+}
+
+export async function obtenerOfertasAdministracionDesdeBaseDeDatos(): Promise<
+  OfertaAdministracion[]
+> {
+  const [filas] =
+    await pool.execute<
+      OfertaAdministracion[]
+    >(
+      `
+        SELECT
+          o.oferta_id,
+
+          a.articulo_id,
+          a.titulo AS articulo_titulo,
+          a.precio AS precio_publicacion,
+          a.estado AS estado_articulo,
+          a.archivado AS articulo_archivado,
+          a.eliminado AS articulo_eliminado,
+
+          comprador.usuario_id
+            AS comprador_id,
+
+          CONCAT(
+            comprador.nombre,
+            ' ',
+            comprador.apellido
+          ) AS comprador_nombre,
+
+          comprador.email
+            AS comprador_email,
+
+          vendedor.usuario_id
+            AS vendedor_id,
+
+          CONCAT(
+            vendedor.nombre,
+            ' ',
+            vendedor.apellido
+          ) AS vendedor_nombre,
+
+          vendedor.email
+            AS vendedor_email,
+
+          o.precio_ofertado AS precio_oferta,
+          o.mensaje,
+
+          o.precio_contraoferta,
+          o.mensaje_contraoferta,
+
+          o.estado,
+          o.fecha_oferta,
+          o.fecha_respuesta
+
+        FROM ofertas AS o
+
+        INNER JOIN articulos AS a
+          ON a.articulo_id =
+            o.articulo_id
+
+        INNER JOIN usuarios AS comprador
+          ON comprador.usuario_id =
+            o.comprador_id
+
+        INNER JOIN usuarios AS vendedor
+          ON vendedor.usuario_id =
+            a.vendedor_id
+
+        ORDER BY
+          o.fecha_oferta DESC,
+          o.oferta_id DESC
+      `,
+    );
+
+  return filas;
 }
 
 export async function obtenerCategoriasAdministracionDesdeBaseDeDatos(): Promise<
@@ -352,7 +463,9 @@ export async function obtenerCategoriaAdministracionPorNombreDesdeBaseDeDatos(
       AND categoria_id <> ?
     `;
 
-    parametros.push(excluirCategoriaId);
+    parametros.push(
+      excluirCategoriaId,
+    );
   }
 
   consulta += `
@@ -501,6 +614,7 @@ export async function obtenerPublicacionesPorMesDesdeBaseDeDatos(): Promise<
             ),
             INTERVAL 11 MONTH
           )
+          AND eliminado = 0
         GROUP BY
           YEAR(fecha_publicacion),
           MONTH(fecha_publicacion),
@@ -540,6 +654,7 @@ export async function obtenerPublicacionesPorEstadoDesdeBaseDeDatos(): Promise<
             END AS estado,
             COUNT(*) AS total
           FROM articulos
+          WHERE eliminado = 0
           GROUP BY
             CASE
               WHEN estado = 'archivado'
@@ -579,6 +694,7 @@ export async function obtenerPublicacionesPorCategoriaDesdeBaseDeDatos(): Promis
         LEFT JOIN articulos AS a
           ON a.categoria_id =
             c.categoria_id
+          AND a.eliminado = 0
         GROUP BY
           c.categoria_id,
           c.nombre

@@ -1,0 +1,12 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const notificacion_controller_js_1 = require("../controllers/notificacion.controller.js");
+const auth_middleware_js_1 = require("../middlewares/auth.middleware.js");
+const notificacionRouter = (0, express_1.Router)();
+notificacionRouter.use(auth_middleware_js_1.verificarToken);
+notificacionRouter.get("/", notificacion_controller_js_1.listarNotificaciones);
+notificacionRouter.get("/resumen", notificacion_controller_js_1.obtenerResumenNotificaciones);
+notificacionRouter.patch("/:notificacionId/leida", notificacion_controller_js_1.marcarNotificacionLeida);
+notificacionRouter.patch("/marcar-todas/leidas", notificacion_controller_js_1.marcarTodasLeidas);
+exports.default = notificacionRouter;

@@ -8,6 +8,7 @@ import {
   crearCategoriaAdmin,
   obtenerCategoriasAdmin,
   obtenerEstadisticasDashboardAdmin,
+  obtenerOfertasAdmin,
   obtenerPublicacionesAdmin,
   obtenerResumenAdmin,
   obtenerUsuariosAdmin,
@@ -53,6 +54,11 @@ adminRouter.get(
 adminRouter.patch(
   "/publicaciones/:articuloId/estado",
   cambiarEstadoPublicacionAdmin,
+);
+
+adminRouter.get(
+  "/ofertas",
+  obtenerOfertasAdmin,
 );
 
 adminRouter.get(

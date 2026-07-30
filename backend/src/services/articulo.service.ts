@@ -9,6 +9,7 @@ import {
   actualizarEstadoArticuloEnBaseDeDatos,
   buscarArticulosEnBaseDeDatos,
   crearArticuloEnBaseDeDatos,
+  eliminarArticuloLogicamenteEnBaseDeDatos,
   obtenerArticuloPorIdEnBaseDeDatos,
   obtenerArticulosPorVendedorId,
   type ActualizarArticuloDatos,
@@ -45,7 +46,9 @@ interface ActualizarArchivadoEntrada {
 function convertirArticuloId(
   articuloId: string,
 ): number {
-  const idConvertido = Number(articuloId);
+  const idConvertido = Number(
+    articuloId,
+  );
 
   if (
     !Number.isInteger(idConvertido) ||
@@ -62,7 +65,9 @@ function convertirArticuloId(
 function convertirVendedorId(
   vendedorId: number,
 ): number {
-  const idConvertido = Number(vendedorId);
+  const idConvertido = Number(
+    vendedorId,
+  );
 
   if (
     !Number.isInteger(idConvertido) ||
@@ -94,13 +99,16 @@ function validarDatosArticulo(
       ? entrada.ubicacion.trim()
       : "";
 
-  const precio = Number(entrada.precio);
+  const precio = Number(
+    entrada.precio,
+  );
 
   const categoriaId = Number(
     entrada.categoriaId,
   );
 
-  const condicion = entrada.condicion;
+  const condicion =
+    entrada.condicion;
 
   if (titulo.length < 3) {
     throw new Error(
@@ -158,6 +166,21 @@ function validarDatosArticulo(
   };
 }
 
+function verificarPropietario(
+  articulo: Articulo,
+  vendedorId: number,
+): void {
+  if (
+    Number(
+      articulo.vendedor_id,
+    ) !== vendedorId
+  ) {
+    throw new Error(
+      "No tienes permiso para modificar esta publicación",
+    );
+  }
+}
+
 export async function buscarArticulos(
   termino: string | undefined,
   categoriaId: string | undefined,
@@ -165,15 +188,18 @@ export async function buscarArticulos(
   const terminoLimpio =
     termino?.trim() ?? "";
 
-  let categoriaConvertida: number | null =
-    null;
+  let categoriaConvertida:
+    | number
+    | null = null;
 
   if (categoriaId) {
     const numeroCategoria =
       Number(categoriaId);
 
     if (
-      !Number.isInteger(numeroCategoria) ||
+      !Number.isInteger(
+        numeroCategoria,
+      ) ||
       numeroCategoria < 1
     ) {
       throw new Error(
@@ -195,7 +221,9 @@ export async function obtenerMisArticulos(
   vendedorId: number,
 ): Promise<Articulo[]> {
   const idConvertido =
-    convertirVendedorId(vendedorId);
+    convertirVendedorId(
+      vendedorId,
+    );
 
   return obtenerArticulosPorVendedorId(
     idConvertido,
@@ -206,7 +234,9 @@ export async function obtenerArticuloPorId(
   articuloId: string,
 ): Promise<Articulo | null> {
   const idConvertido =
-    convertirArticuloId(articuloId);
+    convertirArticuloId(
+      articuloId,
+    );
 
   return obtenerArticuloPorIdEnBaseDeDatos(
     idConvertido,
@@ -217,13 +247,18 @@ export async function crearArticulo(
   entrada: CrearArticuloEntrada,
 ): Promise<Articulo> {
   const datosArticulo =
-    validarDatosArticulo(entrada);
+    validarDatosArticulo(
+      entrada,
+    );
 
-  const vendedorId =
-    Number(entrada.vendedorId);
+  const vendedorId = Number(
+    entrada.vendedorId,
+  );
 
   if (
-    !Number.isInteger(vendedorId) ||
+    !Number.isInteger(
+      vendedorId,
+    ) ||
     vendedorId < 1
   ) {
     throw new Error(
@@ -237,7 +272,9 @@ export async function crearArticulo(
   };
 
   const articuloId =
-    await crearArticuloEnBaseDeDatos(datos);
+    await crearArticuloEnBaseDeDatos(
+      datos,
+    );
 
   const articulo =
     await obtenerArticuloPorIdEnBaseDeDatos(
@@ -256,12 +293,17 @@ export async function crearArticulo(
 export async function actualizarArticulo(
   articuloId: string,
   entrada: ActualizarArticuloEntrada,
+  vendedorId?: number,
 ): Promise<Articulo> {
   const idConvertido =
-    convertirArticuloId(articuloId);
+    convertirArticuloId(
+      articuloId,
+    );
 
   const datos =
-    validarDatosArticulo(entrada);
+    validarDatosArticulo(
+      entrada,
+    );
 
   const articuloActual =
     await obtenerArticuloPorIdEnBaseDeDatos(
@@ -271,6 +313,18 @@ export async function actualizarArticulo(
   if (!articuloActual) {
     throw new Error(
       "El artículo no existe",
+    );
+  }
+
+  if (vendedorId !== undefined) {
+    const vendedorConvertido =
+      convertirVendedorId(
+        vendedorId,
+      );
+
+    verificarPropietario(
+      articuloActual,
+      vendedorConvertido,
     );
   }
 
@@ -303,11 +357,15 @@ export async function actualizarArticulo(
 export async function actualizarEstadoArticulo(
   articuloId: string,
   entrada: ActualizarEstadoEntrada,
+  vendedorId?: number,
 ): Promise<Articulo> {
   const idConvertido =
-    convertirArticuloId(articuloId);
+    convertirArticuloId(
+      articuloId,
+    );
 
-  const estado = entrada.estado;
+  const estado =
+    entrada.estado;
 
   if (
     estado !== "activo" &&
@@ -326,6 +384,18 @@ export async function actualizarEstadoArticulo(
   if (!articuloActual) {
     throw new Error(
       "El artículo no existe",
+    );
+  }
+
+  if (vendedorId !== undefined) {
+    const vendedorConvertido =
+      convertirVendedorId(
+        vendedorId,
+      );
+
+    verificarPropietario(
+      articuloActual,
+      vendedorConvertido,
     );
   }
 
@@ -358,9 +428,12 @@ export async function actualizarEstadoArticulo(
 export async function actualizarArchivadoArticulo(
   articuloId: string,
   entrada: ActualizarArchivadoEntrada,
+  vendedorId?: number,
 ): Promise<Articulo> {
   const idConvertido =
-    convertirArticuloId(articuloId);
+    convertirArticuloId(
+      articuloId,
+    );
 
   const valorArchivado =
     entrada.archivado;
@@ -391,6 +464,18 @@ export async function actualizarArchivadoArticulo(
     );
   }
 
+  if (vendedorId !== undefined) {
+    const vendedorConvertido =
+      convertirVendedorId(
+        vendedorId,
+      );
+
+    verificarPropietario(
+      articuloActual,
+      vendedorConvertido,
+    );
+  }
+
   const actualizado =
     await actualizarArchivadoArticuloEnBaseDeDatos(
       idConvertido,
@@ -415,4 +500,47 @@ export async function actualizarArchivadoArticulo(
   }
 
   return articuloActualizado;
+}
+
+export async function eliminarArticulo(
+  articuloId: string,
+  vendedorId: number,
+): Promise<void> {
+  const idConvertido =
+    convertirArticuloId(
+      articuloId,
+    );
+
+  const vendedorConvertido =
+    convertirVendedorId(
+      vendedorId,
+    );
+
+  const articuloActual =
+    await obtenerArticuloPorIdEnBaseDeDatos(
+      idConvertido,
+    );
+
+  if (!articuloActual) {
+    throw new Error(
+      "El artículo no existe o ya fue eliminado",
+    );
+  }
+
+  verificarPropietario(
+    articuloActual,
+    vendedorConvertido,
+  );
+
+  const eliminado =
+    await eliminarArticuloLogicamenteEnBaseDeDatos(
+      idConvertido,
+      vendedorConvertido,
+    );
+
+  if (!eliminado) {
+    throw new Error(
+      "No se pudo eliminar la publicación",
+    );
+  }
 }

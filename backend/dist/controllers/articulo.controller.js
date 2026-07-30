@@ -4,6 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.obtenerArticulos = obtenerArticulos;
+exports.obtenerMisPublicaciones = obtenerMisPublicaciones;
 exports.obtenerArticulo = obtenerArticulo;
 exports.publicarArticulo = publicarArticulo;
 exports.editarArticulo = editarArticulo;
@@ -68,6 +69,29 @@ async function obtenerArticulos(request, response) {
             ? request.query.categoriaId
             : undefined;
         const articulos = await (0, articulo_service_js_1.buscarArticulos)(termino, categoriaId);
+        response.status(200).json({
+            ok: true,
+            total: articulos.length,
+            articulos,
+        });
+    }
+    catch (error) {
+        response.status(400).json({
+            ok: false,
+            message: obtenerMensajeError(error),
+        });
+    }
+}
+async function obtenerMisPublicaciones(request, response) {
+    try {
+        if (!request.usuario) {
+            response.status(401).json({
+                ok: false,
+                message: "Debes iniciar sesión para ver tus publicaciones",
+            });
+            return;
+        }
+        const articulos = await (0, articulo_service_js_1.obtenerMisArticulos)(request.usuario.usuarioId);
         response.status(200).json({
             ok: true,
             total: articulos.length,

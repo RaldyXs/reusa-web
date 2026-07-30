@@ -1,9 +1,14 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 
-import type { Request, Response } from "express";
+import type {
+  Request,
+  Response,
+} from "express";
 
-import type { RequestAutenticado } from "../middlewares/auth.middleware.js";
+import type {
+  RequestAutenticado,
+} from "../middlewares/auth.middleware.js";
 
 import {
   actualizarArchivadoArticulo,
@@ -11,6 +16,7 @@ import {
   actualizarEstadoArticulo,
   buscarArticulos,
   crearArticulo,
+  eliminarArticulo,
   obtenerArticuloPorId,
   obtenerMisArticulos,
 } from "../services/articulo.service.js";
@@ -21,7 +27,9 @@ import {
   guardarImagenesArticuloEnBaseDeDatos,
 } from "../repositories/articulo.repository.js";
 
-function obtenerMensajeError(error: unknown): string {
+function obtenerMensajeError(
+  error: unknown,
+): string {
   return error instanceof Error
     ? error.message
     : "Ocurrió un error desconocido";
@@ -52,13 +60,17 @@ function usuarioPuedeGestionarArticulo(
     return false;
   }
 
-  if (request.usuario.rol === "administrador") {
+  if (
+    request.usuario.rol ===
+    "administrador"
+  ) {
     return true;
   }
 
   return (
-    Number(request.usuario.usuarioId) ===
-    Number(vendedorId)
+    Number(
+      request.usuario.usuarioId,
+    ) === Number(vendedorId)
   );
 }
 
@@ -66,8 +78,9 @@ async function eliminarArchivos(
   archivos: Express.Multer.File[],
 ): Promise<void> {
   await Promise.allSettled(
-    archivos.map((archivo) =>
-      fs.unlink(archivo.path),
+    archivos.map(
+      (archivo) =>
+        fs.unlink(archivo.path),
     ),
   );
 }
@@ -76,20 +89,26 @@ async function eliminarArchivoDesdeUrl(
   urlImagen: string,
 ): Promise<void> {
   try {
-    const url = new URL(urlImagen);
-
-    const nombreArchivo = path.basename(
-      url.pathname,
+    const url = new URL(
+      urlImagen,
     );
 
-    const rutaArchivo = path.resolve(
-      process.cwd(),
-      "uploads",
-      "articulos",
-      nombreArchivo,
-    );
+    const nombreArchivo =
+      path.basename(
+        url.pathname,
+      );
 
-    await fs.unlink(rutaArchivo);
+    const rutaArchivo =
+      path.resolve(
+        process.cwd(),
+        "uploads",
+        "articulos",
+        nombreArchivo,
+      );
+
+    await fs.unlink(
+      rutaArchivo,
+    );
   } catch (error) {
     const codigo =
       typeof error === "object" &&
@@ -113,19 +132,22 @@ export async function obtenerArticulos(
 ): Promise<void> {
   try {
     const termino =
-      typeof request.query.termino === "string"
+      typeof request.query.termino ===
+      "string"
         ? request.query.termino
         : undefined;
 
     const categoriaId =
-      typeof request.query.categoriaId === "string"
+      typeof request.query
+        .categoriaId === "string"
         ? request.query.categoriaId
         : undefined;
 
-    const articulos = await buscarArticulos(
-      termino,
-      categoriaId,
-    );
+    const articulos =
+      await buscarArticulos(
+        termino,
+        categoriaId,
+      );
 
     response.status(200).json({
       ok: true,
@@ -135,7 +157,10 @@ export async function obtenerArticulos(
   } catch (error) {
     response.status(400).json({
       ok: false,
-      message: obtenerMensajeError(error),
+      message:
+        obtenerMensajeError(
+          error,
+        ),
     });
   }
 }
@@ -155,9 +180,10 @@ export async function obtenerMisPublicaciones(
       return;
     }
 
-    const articulos = await obtenerMisArticulos(
-      request.usuario.usuarioId,
-    );
+    const articulos =
+      await obtenerMisArticulos(
+        request.usuario.usuarioId,
+      );
 
     response.status(200).json({
       ok: true,
@@ -167,7 +193,10 @@ export async function obtenerMisPublicaciones(
   } catch (error) {
     response.status(400).json({
       ok: false,
-      message: obtenerMensajeError(error),
+      message:
+        obtenerMensajeError(
+          error,
+        ),
     });
   }
 }
@@ -178,21 +207,25 @@ export async function obtenerArticulo(
 ): Promise<void> {
   try {
     const id =
-      typeof request.params.id === "string"
+      typeof request.params.id ===
+      "string"
         ? request.params.id
         : undefined;
 
     if (!id) {
       response.status(400).json({
         ok: false,
-        message: "ID de artículo inválido",
+        message:
+          "ID de artículo inválido",
       });
 
       return;
     }
 
     const articulo =
-      await obtenerArticuloPorId(id);
+      await obtenerArticuloPorId(
+        id,
+      );
 
     if (!articulo) {
       response.status(404).json({
@@ -211,7 +244,10 @@ export async function obtenerArticulo(
   } catch (error) {
     response.status(400).json({
       ok: false,
-      message: obtenerMensajeError(error),
+      message:
+        obtenerMensajeError(
+          error,
+        ),
     });
   }
 }
@@ -231,10 +267,12 @@ export async function publicarArticulo(
       return;
     }
 
-    const articulo = await crearArticulo({
-      ...request.body,
-      vendedorId: request.usuario.usuarioId,
-    });
+    const articulo =
+      await crearArticulo({
+        ...request.body,
+        vendedorId:
+          request.usuario.usuarioId,
+      });
 
     response.status(201).json({
       ok: true,
@@ -245,7 +283,10 @@ export async function publicarArticulo(
   } catch (error) {
     response.status(400).json({
       ok: false,
-      message: obtenerMensajeError(error),
+      message:
+        obtenerMensajeError(
+          error,
+        ),
     });
   }
 }
@@ -266,12 +307,15 @@ export async function editarArticulo(
     }
 
     const id =
-      typeof request.params.id === "string"
+      typeof request.params.id ===
+      "string"
         ? request.params.id
         : undefined;
 
     const articuloId =
-      convertirArticuloId(id);
+      convertirArticuloId(
+        id,
+      );
 
     const articuloExistente =
       await obtenerArticuloPorId(
@@ -281,7 +325,8 @@ export async function editarArticulo(
     if (!articuloExistente) {
       response.status(404).json({
         ok: false,
-        message: "El artículo no existe",
+        message:
+          "El artículo no existe",
       });
 
       return;
@@ -312,20 +357,27 @@ export async function editarArticulo(
       ok: true,
       message:
         "Artículo actualizado correctamente",
-      articulo: articuloActualizado,
+      articulo:
+        articuloActualizado,
     });
   } catch (error) {
-    const mensaje = obtenerMensajeError(error);
+    const mensaje =
+      obtenerMensajeError(
+        error,
+      );
 
     const estadoHttp =
-      mensaje === "El artículo no existe"
+      mensaje ===
+      "El artículo no existe"
         ? 404
         : 400;
 
-    response.status(estadoHttp).json({
-      ok: false,
-      message: mensaje,
-    });
+    response
+      .status(estadoHttp)
+      .json({
+        ok: false,
+        message: mensaje,
+      });
   }
 }
 
@@ -345,12 +397,15 @@ export async function cambiarEstadoArticulo(
     }
 
     const id =
-      typeof request.params.id === "string"
+      typeof request.params.id ===
+      "string"
         ? request.params.id
         : undefined;
 
     const articuloId =
-      convertirArticuloId(id);
+      convertirArticuloId(
+        id,
+      );
 
     const articuloExistente =
       await obtenerArticuloPorId(
@@ -360,7 +415,8 @@ export async function cambiarEstadoArticulo(
     if (!articuloExistente) {
       response.status(404).json({
         ok: false,
-        message: "El artículo no existe",
+        message:
+          "El artículo no existe",
       });
 
       return;
@@ -391,20 +447,27 @@ export async function cambiarEstadoArticulo(
       ok: true,
       message:
         "Estado actualizado correctamente",
-      articulo: articuloActualizado,
+      articulo:
+        articuloActualizado,
     });
   } catch (error) {
-    const mensaje = obtenerMensajeError(error);
+    const mensaje =
+      obtenerMensajeError(
+        error,
+      );
 
     const estadoHttp =
-      mensaje === "El artículo no existe"
+      mensaje ===
+      "El artículo no existe"
         ? 404
         : 400;
 
-    response.status(estadoHttp).json({
-      ok: false,
-      message: mensaje,
-    });
+    response
+      .status(estadoHttp)
+      .json({
+        ok: false,
+        message: mensaje,
+      });
   }
 }
 
@@ -424,12 +487,15 @@ export async function cambiarArchivadoArticulo(
     }
 
     const id =
-      typeof request.params.id === "string"
+      typeof request.params.id ===
+      "string"
         ? request.params.id
         : undefined;
 
     const articuloId =
-      convertirArticuloId(id);
+      convertirArticuloId(
+        id,
+      );
 
     const articuloExistente =
       await obtenerArticuloPorId(
@@ -439,7 +505,8 @@ export async function cambiarArchivadoArticulo(
     if (!articuloExistente) {
       response.status(404).json({
         ok: false,
-        message: "El artículo no existe",
+        message:
+          "El artículo no existe",
       });
 
       return;
@@ -467,27 +534,141 @@ export async function cambiarArchivadoArticulo(
       );
 
     const estaArchivado =
-      Number(articuloActualizado.archivado) === 1;
+      Number(
+        articuloActualizado.archivado,
+      ) === 1;
 
     response.status(200).json({
       ok: true,
       message: estaArchivado
         ? "Publicación archivada correctamente"
         : "Publicación desarchivada correctamente",
-      articulo: articuloActualizado,
+      articulo:
+        articuloActualizado,
     });
   } catch (error) {
-    const mensaje = obtenerMensajeError(error);
+    const mensaje =
+      obtenerMensajeError(
+        error,
+      );
 
     const estadoHttp =
-      mensaje === "El artículo no existe"
+      mensaje ===
+      "El artículo no existe"
         ? 404
         : 400;
 
-    response.status(estadoHttp).json({
-      ok: false,
-      message: mensaje,
+    response
+      .status(estadoHttp)
+      .json({
+        ok: false,
+        message: mensaje,
+      });
+  }
+}
+
+export async function eliminarPublicacion(
+  request: RequestAutenticado,
+  response: Response,
+): Promise<void> {
+  try {
+    if (!request.usuario) {
+      response.status(401).json({
+        ok: false,
+        message:
+          "Debes iniciar sesión para eliminar publicaciones",
+      });
+
+      return;
+    }
+
+    const id =
+      typeof request.params.id ===
+      "string"
+        ? request.params.id
+        : undefined;
+
+    const articuloId =
+      convertirArticuloId(
+        id,
+      );
+
+    const articuloExistente =
+      await obtenerArticuloPorId(
+        String(articuloId),
+      );
+
+    if (!articuloExistente) {
+      response.status(404).json({
+        ok: false,
+        message:
+          "El artículo no existe o ya fue eliminado",
+      });
+
+      return;
+    }
+
+    const usuarioId = Number(
+      request.usuario.usuarioId,
+    );
+
+    if (
+      Number(
+        articuloExistente.vendedor_id,
+      ) !== usuarioId
+    ) {
+      response.status(403).json({
+        ok: false,
+        message:
+          "No tienes permiso para eliminar esta publicación",
+      });
+
+      return;
+    }
+
+    await eliminarArticulo(
+      String(articuloId),
+      usuarioId,
+    );
+
+    response.status(200).json({
+      ok: true,
+      message:
+        "Publicación eliminada correctamente",
     });
+  } catch (error) {
+    const mensaje =
+      obtenerMensajeError(
+        error,
+      );
+
+    let estadoHttp = 400;
+
+    if (
+      mensaje.includes(
+        "no existe",
+      ) ||
+      mensaje.includes(
+        "ya fue eliminado",
+      )
+    ) {
+      estadoHttp = 404;
+    }
+
+    if (
+      mensaje.includes(
+        "No tienes permiso",
+      )
+    ) {
+      estadoHttp = 403;
+    }
+
+    response
+      .status(estadoHttp)
+      .json({
+        ok: false,
+        message: mensaje,
+      });
   }
 }
 
@@ -496,12 +677,15 @@ export async function guardarImagenesArticulo(
   response: Response,
 ): Promise<void> {
   const archivos =
-    (request.files as Express.Multer.File[]) ??
+    (request.files as
+      Express.Multer.File[]) ??
     [];
 
   try {
     if (!request.usuario) {
-      await eliminarArchivos(archivos);
+      await eliminarArchivos(
+        archivos,
+      );
 
       response.status(401).json({
         ok: false,
@@ -513,12 +697,15 @@ export async function guardarImagenesArticulo(
     }
 
     const id =
-      typeof request.params.id === "string"
+      typeof request.params.id ===
+      "string"
         ? request.params.id
         : undefined;
 
     const articuloId =
-      convertirArticuloId(id);
+      convertirArticuloId(
+        id,
+      );
 
     const articuloExistente =
       await obtenerArticuloPorId(
@@ -526,11 +713,14 @@ export async function guardarImagenesArticulo(
       );
 
     if (!articuloExistente) {
-      await eliminarArchivos(archivos);
+      await eliminarArchivos(
+        archivos,
+      );
 
       response.status(404).json({
         ok: false,
-        message: "El artículo no existe",
+        message:
+          "El artículo no existe",
       });
 
       return;
@@ -542,7 +732,9 @@ export async function guardarImagenesArticulo(
         articuloExistente.vendedor_id,
       )
     ) {
-      await eliminarArchivos(archivos);
+      await eliminarArchivos(
+        archivos,
+      );
 
       response.status(403).json({
         ok: false,
@@ -553,7 +745,9 @@ export async function guardarImagenesArticulo(
       return;
     }
 
-    if (archivos.length === 0) {
+    if (
+      archivos.length === 0
+    ) {
       response.status(400).json({
         ok: false,
         message:
@@ -569,10 +763,13 @@ export async function guardarImagenesArticulo(
       );
 
     if (
-      cantidadActual + archivos.length >
+      cantidadActual +
+        archivos.length >
       5
     ) {
-      await eliminarArchivos(archivos);
+      await eliminarArchivos(
+        archivos,
+      );
 
       response.status(400).json({
         ok: false,
@@ -584,20 +781,28 @@ export async function guardarImagenesArticulo(
     }
 
     const baseUrl =
-      `${request.protocol}://${request.get("host")}`;
+      `${request.protocol}://${request.get(
+        "host",
+      )}`;
 
-    const imagenes = archivos.map(
-      (archivo, indice) => ({
-        urlImagen:
-          `${baseUrl}/uploads/articulos/${archivo.filename}`,
+    const imagenes =
+      archivos.map(
+        (
+          archivo,
+          indice,
+        ) => ({
+          urlImagen:
+            `${baseUrl}/uploads/articulos/${archivo.filename}`,
 
-        esPrincipal:
-          cantidadActual === 0 &&
-          indice === 0,
+          esPrincipal:
+            cantidadActual === 0 &&
+            indice === 0,
 
-        orden: cantidadActual + indice,
-      }),
-    );
+          orden:
+            cantidadActual +
+            indice,
+        }),
+      );
 
     await guardarImagenesArticuloEnBaseDeDatos(
       articuloId,
@@ -614,18 +819,26 @@ export async function guardarImagenesArticulo(
       message:
         "Imágenes guardadas correctamente",
 
-      imagenes: imagenes.map(
-        (imagen) => imagen.urlImagen,
-      ),
+      imagenes:
+        imagenes.map(
+          (imagen) =>
+            imagen.urlImagen,
+        ),
 
-      articulo: articuloActualizado,
+      articulo:
+        articuloActualizado,
     });
   } catch (error) {
-    await eliminarArchivos(archivos);
+    await eliminarArchivos(
+      archivos,
+    );
 
     response.status(400).json({
       ok: false,
-      message: obtenerMensajeError(error),
+      message:
+        obtenerMensajeError(
+          error,
+        ),
     });
   }
 }
@@ -646,16 +859,22 @@ export async function eliminarImagenArticulo(
     }
 
     const id =
-      typeof request.params.id === "string"
+      typeof request.params.id ===
+      "string"
         ? request.params.id
         : undefined;
 
     const articuloId =
-      convertirArticuloId(id);
+      convertirArticuloId(
+        id,
+      );
 
     const urlImagen =
-      typeof request.body.urlImagen === "string"
-        ? request.body.urlImagen.trim()
+      typeof request.body
+        .urlImagen === "string"
+        ? request.body
+            .urlImagen
+            .trim()
         : "";
 
     if (!urlImagen) {
@@ -676,7 +895,8 @@ export async function eliminarImagenArticulo(
     if (!articuloExistente) {
       response.status(404).json({
         ok: false,
-        message: "El artículo no existe",
+        message:
+          "El artículo no existe",
       });
 
       return;
@@ -713,7 +933,9 @@ export async function eliminarImagenArticulo(
       return;
     }
 
-    await eliminarArchivoDesdeUrl(urlImagen);
+    await eliminarArchivoDesdeUrl(
+      urlImagen,
+    );
 
     const articuloActualizado =
       await obtenerArticuloPorId(
@@ -724,12 +946,16 @@ export async function eliminarImagenArticulo(
       ok: true,
       message:
         "Imagen eliminada correctamente",
-      articulo: articuloActualizado,
+      articulo:
+        articuloActualizado,
     });
   } catch (error) {
     response.status(400).json({
       ok: false,
-      message: obtenerMensajeError(error),
+      message:
+        obtenerMensajeError(
+          error,
+        ),
     });
   }
 }
