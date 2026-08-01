@@ -20,7 +20,8 @@
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.2.0",
-    "mysql2": "^3.23.0"
+    "mysql2": "^3.23.0",
+    "nodemailer": "^9.0.3"
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
@@ -29,6 +30,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/multer": "^2.2.0",
     "@types/node": "^26.1.1",
+    "@types/nodemailer": "^8.0.1",
     "tsx": "^4.23.1",
     "typescript": "^7.0.2"
   }

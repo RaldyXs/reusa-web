@@ -11,6 +11,7 @@ export interface ContactoVendedor
   vendedor: string;
   email: string;
   telefono: string | null;
+  mostrar_contacto: number;
 }
 
 export async function obtenerContactoVendedorDesdeBaseDeDatos(
@@ -30,12 +31,19 @@ export async function obtenerContactoVendedorDesdeBaseDeDatos(
             u.apellido
           ) AS vendedor,
           u.email,
-          u.telefono
+          u.telefono,
+          u.mostrar_contacto
         FROM articulos AS a
+
         INNER JOIN usuarios AS u
           ON u.usuario_id =
             a.vendedor_id
+
         WHERE a.articulo_id = ?
+          AND a.eliminado = 0
+          AND u.activo = 1
+          AND u.mostrar_contacto = 1
+
         LIMIT 1
       `,
       [articuloId],
