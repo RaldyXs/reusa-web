@@ -1,0 +1,15 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const mensaje_controller_js_1 = require("../controllers/mensaje.controller.js");
+const auth_middleware_js_1 = require("../middlewares/auth.middleware.js");
+const upload_middleware_js_1 = require("../middlewares/upload.middleware.js");
+const mensajeRouter = (0, express_1.Router)();
+mensajeRouter.use(auth_middleware_js_1.verificarToken);
+mensajeRouter.post("/conversaciones", mensaje_controller_js_1.iniciarConversacion);
+mensajeRouter.get("/conversaciones", mensaje_controller_js_1.listarConversaciones);
+mensajeRouter.get("/conversaciones/:conversacionId", mensaje_controller_js_1.listarMensajes);
+mensajeRouter.post("/conversaciones/:conversacionId", upload_middleware_js_1.subirImagenMensaje, mensaje_controller_js_1.registrarMensaje);
+mensajeRouter.patch("/:mensajeId", mensaje_controller_js_1.actualizarMensaje);
+mensajeRouter.delete("/:mensajeId", mensaje_controller_js_1.borrarMensaje);
+exports.default = mensajeRouter;

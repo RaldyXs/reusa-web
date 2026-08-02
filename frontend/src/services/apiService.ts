@@ -17,8 +17,12 @@ export async function solicitarApi<T>(
     opciones.headers,
   );
 
+  const cuerpoEsFormData =
+    opciones.body instanceof FormData;
+
   if (
     opciones.body !== undefined &&
+    !cuerpoEsFormData &&
     !headers.has("Content-Type")
   ) {
     headers.set(

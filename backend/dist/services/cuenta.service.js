@@ -43,6 +43,22 @@ function limpiarTextoOpcional(valor, nombre, longitudMaxima) {
     }
     return textoLimpio;
 }
+function validarMostrarContacto(valor) {
+    if (typeof valor === "boolean") {
+        return valor;
+    }
+    if (valor === 1 ||
+        valor === "1" ||
+        valor === "true") {
+        return true;
+    }
+    if (valor === 0 ||
+        valor === "0" ||
+        valor === "false") {
+        return false;
+    }
+    throw new Error("La preferencia de contacto no es válida");
+}
 async function obtenerPerfilUsuario(usuarioId) {
     validarIdentificador(usuarioId, "usuario");
     const perfil = await (0, cuenta_repository_js_1.obtenerPerfilUsuarioDesdeBaseDeDatos)(usuarioId);
@@ -52,14 +68,16 @@ async function obtenerPerfilUsuario(usuarioId) {
     return {
         ...perfil,
         activo: Number(perfil.activo),
+        mostrar_contacto: Number(perfil.mostrar_contacto ?? 0),
     };
 }
-async function actualizarPerfilUsuario(usuarioId, nombre, apellido, telefono, ubicacion) {
+async function actualizarPerfilUsuario(usuarioId, nombre, apellido, telefono, ubicacion, mostrarContacto) {
     validarIdentificador(usuarioId, "usuario");
     const nombreLimpio = limpiarTextoObligatorio(nombre, "El nombre", 100);
     const apellidoLimpio = limpiarTextoObligatorio(apellido, "El apellido", 100);
     const telefonoLimpio = limpiarTextoOpcional(telefono, "El teléfono", 30);
     const ubicacionLimpia = limpiarTextoOpcional(ubicacion, "La ubicación", 200);
+    const mostrarContactoValidado = validarMostrarContacto(mostrarContacto);
     const perfilActual = await (0, cuenta_repository_js_1.obtenerPerfilUsuarioDesdeBaseDeDatos)(usuarioId);
     if (!perfilActual) {
         throw new Error("El usuario indicado no existe");
@@ -69,6 +87,7 @@ async function actualizarPerfilUsuario(usuarioId, nombre, apellido, telefono, ub
         apellido: apellidoLimpio,
         telefono: telefonoLimpio,
         ubicacion: ubicacionLimpia,
+        mostrarContacto: mostrarContactoValidado,
     });
     if (!actualizado) {
         throw new Error("No se pudo actualizar el perfil");

@@ -2,6 +2,10 @@ import type {
   RowDataPacket,
 } from "mysql2";
 
+export type TipoMensaje =
+  | "texto"
+  | "imagen";
+
 export interface Conversacion
   extends RowDataPacket {
   conversacion_id: number;
@@ -21,8 +25,14 @@ export interface Conversacion
   otro_usuario_nombre?: string;
 
   ultimo_mensaje?: string | null;
-  fecha_ultimo_mensaje?: Date | string | null;
-  mensajes_no_leidos?: number;
+  fecha_ultimo_mensaje?:
+    | Date
+    | string
+    | null;
+
+  mensajes_no_leidos?:
+    | number
+    | string;
 }
 
 export interface Mensaje
@@ -30,9 +40,20 @@ export interface Mensaje
   mensaje_id: number;
   conversacion_id: number;
   remitente_id: number;
+
   contenido: string;
+  tipo: TipoMensaje;
+  url_imagen: string | null;
+
+  editado: number | boolean;
+  eliminado: number | boolean;
   leido: number | boolean;
+
   fecha_envio: Date | string;
+  fecha_edicion:
+    | Date
+    | string
+    | null;
 
   remitente_nombre?: string;
 }
@@ -45,6 +66,14 @@ export interface CrearConversacionDatos {
 
 export interface CrearMensajeDatos {
   conversacionId: number;
+  remitenteId: number;
+  contenido: string;
+  tipo?: TipoMensaje;
+  urlImagen?: string | null;
+}
+
+export interface ActualizarMensajeDatos {
+  mensajeId: number;
   remitenteId: number;
   contenido: string;
 }

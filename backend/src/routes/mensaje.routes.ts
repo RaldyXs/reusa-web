@@ -1,6 +1,11 @@
-import { Router } from "express";
+import {
+  Router,
+} from "express";
 
 import {
+  actualizarMensaje,
+  borrarConversacion,
+  borrarMensaje,
   iniciarConversacion,
   listarConversaciones,
   listarMensajes,
@@ -10,6 +15,10 @@ import {
 import {
   verificarToken,
 } from "../middlewares/auth.middleware.js";
+
+import {
+  subirImagenMensaje,
+} from "../middlewares/upload.middleware.js";
 
 const mensajeRouter = Router();
 
@@ -34,7 +43,23 @@ mensajeRouter.get(
 
 mensajeRouter.post(
   "/conversaciones/:conversacionId",
+  subirImagenMensaje,
   registrarMensaje,
+);
+
+mensajeRouter.delete(
+  "/conversaciones/:conversacionId",
+  borrarConversacion,
+);
+
+mensajeRouter.patch(
+  "/:mensajeId",
+  actualizarMensaje,
+);
+
+mensajeRouter.delete(
+  "/:mensajeId",
+  borrarMensaje,
 );
 
 export default mensajeRouter;

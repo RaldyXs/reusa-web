@@ -31,6 +31,34 @@ function obtenerUsuarioId(
   return usuarioId;
 }
 
+function obtenerMostrarContacto(
+  valor: unknown,
+): boolean {
+  if (typeof valor === "boolean") {
+    return valor;
+  }
+
+  if (
+    valor === 1 ||
+    valor === "1" ||
+    valor === "true"
+  ) {
+    return true;
+  }
+
+  if (
+    valor === 0 ||
+    valor === "0" ||
+    valor === "false"
+  ) {
+    return false;
+  }
+
+  throw new Error(
+    "La preferencia de contacto no es válida",
+  );
+}
+
 function obtenerCodigoEstado(
   mensaje: string,
 ): number {
@@ -61,6 +89,9 @@ function obtenerCodigoEstado(
   if (
     mensaje.includes(
       "no es válido",
+    ) ||
+    mensaje.includes(
+      "no es válida",
     ) ||
     mensaje.includes(
       "es obligatorio",
@@ -135,6 +166,11 @@ export async function actualizarPerfil(
     const usuarioId =
       obtenerUsuarioId(request);
 
+    const mostrarContacto =
+      obtenerMostrarContacto(
+        request.body.mostrarContacto,
+      );
+
     const perfil =
       await actualizarPerfilUsuario(
         usuarioId,
@@ -142,6 +178,7 @@ export async function actualizarPerfil(
         request.body.apellido,
         request.body.telefono,
         request.body.ubicacion,
+        mostrarContacto,
       );
 
     response.status(200).json({

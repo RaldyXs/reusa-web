@@ -1,4 +1,3 @@
-
 import {
   solicitarApi,
 } from "./apiService";
@@ -20,6 +19,7 @@ export interface PerfilUsuario {
   rol: "usuario" | "administrador";
   activo: number;
   fecha_registro: string;
+  mostrar_contacto: number;
 }
 
 export interface ActualizarPerfilDatos {
@@ -27,6 +27,7 @@ export interface ActualizarPerfilDatos {
   apellido: string;
   telefono: string;
   ubicacion: string;
+  mostrarContacto: boolean;
 }
 
 export interface CambiarContrasenaDatos {
@@ -68,7 +69,13 @@ export async function obtenerPerfil(): Promise<
     );
   }
 
-  return respuesta.perfil;
+  return {
+    ...respuesta.perfil,
+
+    mostrar_contacto: Number(
+      respuesta.perfil.mostrar_contacto ?? 0,
+    ),
+  };
 }
 
 export async function actualizarPerfil(
@@ -94,7 +101,13 @@ export async function actualizarPerfil(
     );
   }
 
-  return respuesta.perfil;
+  return {
+    ...respuesta.perfil,
+
+    mostrar_contacto: Number(
+      respuesta.perfil.mostrar_contacto ?? 0,
+    ),
+  };
 }
 
 export async function cambiarContrasena(

@@ -53,13 +53,16 @@ import {
 function ProductDetail() {
   const navigate = useNavigate();
   const { id } = useParams();
+
   const {
     autenticado,
     usuario,
   } = useAuth();
 
-  const [articulo, setArticulo] =
-    useState<Articulo | null>(null);
+  const [
+    articulo,
+    setArticulo,
+  ] = useState<Articulo | null>(null);
 
   const [
     imagenSeleccionada,
@@ -562,6 +565,12 @@ function ProductDetail() {
     }
   }
 
+  function cerrarContactoVendedor(): void {
+    setContactoVendedor(null);
+    setMensajeContacto("");
+    setErrorContacto("");
+  }
+
   if (cargando) {
     return (
       <p className="status-message">
@@ -616,17 +625,22 @@ function ProductDetail() {
     articulo.estado === "activo" &&
     Number(
       articulo.archivado,
+    ) !== 1 &&
+    Number(
+      articulo.eliminado ?? 0,
     ) !== 1;
 
   const esPropioArticulo =
-    autenticado &&
-    usuario &&
-    Number(
-      usuario.usuarioId,
-    ) ===
-      Number(
-        articulo.vendedor_id,
-      );
+    Boolean(
+      autenticado &&
+        usuario &&
+        Number(
+          usuario.usuarioId,
+        ) ===
+          Number(
+            articulo.vendedor_id,
+          ),
+    );
 
   return (
     <section className="product-detail-page">
@@ -805,26 +819,28 @@ function ProductDetail() {
             </div>
           )}
 
-          {!esPropioArticulo && (
-            <button
-              className="product-detail-contact"
-              type="button"
-              disabled={
-                cargandoContacto
-              }
-              onClick={() =>
-                void cargarContactoVendedor()
-              }
-            >
-              <UserRound size={18} />
+          {!esPropioArticulo &&
+            Number(
+              articulo.mostrar_contacto ?? 0,
+            ) === 1 &&
+            !contactoVendedor && (
+              <button
+                className="product-detail-contact"
+                type="button"
+                disabled={
+                  cargandoContacto
+                }
+                onClick={() =>
+                  void cargarContactoVendedor()
+                }
+              >
+                <UserRound size={18} />
 
-              {cargandoContacto
-                ? "Consultando contacto..."
-                : contactoVendedor
-                  ? "Actualizar contacto"
-                  : "Contactar al vendedor"}
-            </button>
-          )}
+                {cargandoContacto
+                  ? "Consultando contacto..."
+                  : "Ver contacto del vendedor"}
+              </button>
+            )}
 
           {contactoVendedor && (
             <section className="product-detail-card">
@@ -844,15 +860,9 @@ function ProductDetail() {
                 <button
                   type="button"
                   aria-label="Cerrar datos de contacto"
-                  onClick={() => {
-                    setContactoVendedor(
-                      null,
-                    );
-
-                    setMensajeContacto(
-                      "",
-                    );
-                  }}
+                  onClick={
+                    cerrarContactoVendedor
+                  }
                 >
                   <X size={18} />
                 </button>

@@ -5,6 +5,7 @@ exports.obtenerEstadisticasDashboardAdministracion = obtenerEstadisticasDashboar
 exports.obtenerUsuariosAdministracion = obtenerUsuariosAdministracion;
 exports.cambiarEstadoUsuarioAdministracion = cambiarEstadoUsuarioAdministracion;
 exports.obtenerPublicacionesAdministracion = obtenerPublicacionesAdministracion;
+exports.obtenerOfertasAdministracion = obtenerOfertasAdministracion;
 exports.cambiarEstadoPublicacionAdministracion = cambiarEstadoPublicacionAdministracion;
 exports.obtenerCategoriasAdministracion = obtenerCategoriasAdministracion;
 exports.crearCategoriaAdministracion = crearCategoriaAdministracion;
@@ -98,6 +99,9 @@ async function cambiarEstadoUsuarioAdministracion(usuarioId, activo, administrad
 async function obtenerPublicacionesAdministracion() {
     return (0, admin_repository_js_1.obtenerPublicacionesAdministracionDesdeBaseDeDatos)();
 }
+async function obtenerOfertasAdministracion() {
+    return (0, admin_repository_js_1.obtenerOfertasAdministracionDesdeBaseDeDatos)();
+}
 async function cambiarEstadoPublicacionAdministracion(articuloId, estado) {
     if (!Number.isInteger(articuloId) ||
         articuloId <= 0) {
@@ -117,7 +121,9 @@ async function cambiarEstadoPublicacionAdministracion(articuloId, estado) {
     }
     const yaTieneEseEstado = publicacion.estado === estado &&
         Number(publicacion.archivado) ===
-            (estado === "archivado" ? 1 : 0);
+            (estado === "archivado"
+                ? 1
+                : 0);
     if (yaTieneEseEstado) {
         return publicacion;
     }
@@ -167,7 +173,8 @@ async function actualizarCategoriaAdministracion(categoriaId, datos) {
     }
     const mismosDatos = categoriaActual.nombre ===
         categoriaValidada.nombre &&
-        (categoriaActual.descripcion ?? null) ===
+        (categoriaActual.descripcion ??
+            null) ===
             categoriaValidada.descripcion;
     if (mismosDatos) {
         return categoriaActual;

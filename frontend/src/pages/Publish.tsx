@@ -16,6 +16,10 @@ import {
   subirImagenesArticulo,
 } from "../services/articuloService";
 
+import {
+  PROVINCIAS_REPUBLICA_DOMINICANA,
+} from "../data/provincias";
+
 interface VistaPrevia {
   archivo: File;
   url: string;
@@ -255,7 +259,7 @@ function Publish() {
 
     if (!ubicacion) {
       setError(
-        "La ubicación es obligatoria.",
+        "Debes seleccionar una provincia.",
       );
 
       window.scrollTo({
@@ -538,16 +542,30 @@ function Publish() {
             <h2>Ubicación y contacto</h2>
 
             <label className="form-field">
-              <span>Ubicación</span>
+              <span>Provincia</span>
 
               <div className="input-with-icon">
                 <MapPin size={17} />
 
-                <input
-                  type="text"
+                <select
                   name="ubicacion"
-                  placeholder="Los Alcarrizos"
-                />
+                  defaultValue=""
+                >
+                  <option value="">
+                    Selecciona una provincia
+                  </option>
+
+                  {PROVINCIAS_REPUBLICA_DOMINICANA.map(
+                    (provincia) => (
+                      <option
+                        key={provincia}
+                        value={provincia}
+                      >
+                        {provincia}
+                      </option>
+                    ),
+                  )}
+                </select>
               </div>
             </label>
 

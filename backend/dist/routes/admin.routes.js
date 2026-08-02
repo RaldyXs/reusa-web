@@ -11,6 +11,7 @@ adminRouter.get("/usuarios", admin_controller_js_1.obtenerUsuariosAdmin);
 adminRouter.patch("/usuarios/:usuarioId/estado", admin_controller_js_1.cambiarEstadoUsuarioAdmin);
 adminRouter.get("/publicaciones", admin_controller_js_1.obtenerPublicacionesAdmin);
 adminRouter.patch("/publicaciones/:articuloId/estado", admin_controller_js_1.cambiarEstadoPublicacionAdmin);
+adminRouter.get("/ofertas", admin_controller_js_1.obtenerOfertasAdmin);
 adminRouter.get("/categorias", admin_controller_js_1.obtenerCategoriasAdmin);
 adminRouter.post("/categorias", admin_controller_js_1.crearCategoriaAdmin);
 adminRouter.put("/categorias/:categoriaId", admin_controller_js_1.actualizarCategoriaAdmin);

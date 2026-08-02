@@ -18,6 +18,7 @@ import MainLayout from "./layouts/MainLayout";
 
 import Categories from "./pages/Categories";
 import EditPublication from "./pages/EditPublication";
+import ForgotPassword from "./pages/ForgotPassword";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Messages from "./pages/Messages";
@@ -26,6 +27,7 @@ import ProductDetail from "./pages/ProductDetail";
 import Publish from "./pages/Publish";
 import PurchaseHistory from "./pages/PurchaseHistory";
 import Register from "./pages/Register";
+import ResetPassword from "./pages/ResetPassword";
 import SalesHistory from "./pages/SalesHistory";
 import Saved from "./pages/Saved";
 import SearchResults from "./pages/SearchResults";
@@ -69,6 +71,16 @@ function App() {
           <Route
             path="/registro"
             element={<Register />}
+          />
+
+          <Route
+            path="/recuperar-contrasena"
+            element={<ForgotPassword />}
+          />
+
+          <Route
+            path="/restablecer-contrasena"
+            element={<ResetPassword />}
           />
 
           <Route
@@ -219,37 +231,27 @@ function App() {
           >
             <Route
               index
-              element={
-                <AdminDashboard />
-              }
+              element={<AdminDashboard />}
             />
 
             <Route
               path="usuarios"
-              element={
-                <AdminUsers />
-              }
+              element={<AdminUsers />}
             />
 
             <Route
               path="publicaciones"
-              element={
-                <AdminPublications />
-              }
+              element={<AdminPublications />}
             />
 
             <Route
               path="ofertas"
-              element={
-                <AdminOffers />
-              }
+              element={<AdminOffers />}
             />
 
             <Route
               path="categorias"
-              element={
-                <AdminCategories />
-              }
+              element={<AdminCategories />}
             />
           </Route>
 

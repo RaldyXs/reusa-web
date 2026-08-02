@@ -34,5 +34,9 @@ articuloRouter.put("/:id", auth_middleware_js_1.verificarToken, (0, auth_middlew
     "usuario",
     "administrador",
 ]), articulo_controller_js_1.editarArticulo);
+articuloRouter.delete("/:id", auth_middleware_js_1.verificarToken, (0, auth_middleware_js_1.permitirRoles)([
+    "usuario",
+    "administrador",
+]), articulo_controller_js_1.eliminarPublicacion);
 articuloRouter.get("/:id", articulo_controller_js_1.obtenerArticulo);
 exports.default = articuloRouter;

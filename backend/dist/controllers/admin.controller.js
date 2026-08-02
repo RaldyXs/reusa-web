@@ -5,6 +5,7 @@ exports.obtenerEstadisticasDashboardAdmin = obtenerEstadisticasDashboardAdmin;
 exports.obtenerUsuariosAdmin = obtenerUsuariosAdmin;
 exports.cambiarEstadoUsuarioAdmin = cambiarEstadoUsuarioAdmin;
 exports.obtenerPublicacionesAdmin = obtenerPublicacionesAdmin;
+exports.obtenerOfertasAdmin = obtenerOfertasAdmin;
 exports.cambiarEstadoPublicacionAdmin = cambiarEstadoPublicacionAdmin;
 exports.obtenerCategoriasAdmin = obtenerCategoriasAdmin;
 exports.crearCategoriaAdmin = crearCategoriaAdmin;
@@ -142,6 +143,22 @@ async function obtenerPublicacionesAdmin(_request, response) {
         response.status(500).json({
             ok: false,
             message: "No se pudieron obtener las publicaciones",
+        });
+    }
+}
+async function obtenerOfertasAdmin(_request, response) {
+    try {
+        const ofertas = await (0, admin_service_js_1.obtenerOfertasAdministracion)();
+        response.status(200).json({
+            ok: true,
+            ofertas,
+        });
+    }
+    catch (errorDesconocido) {
+        console.error("Error al obtener las ofertas administrativas:", errorDesconocido);
+        response.status(500).json({
+            ok: false,
+            message: "No se pudieron obtener las ofertas",
         });
     }
 }

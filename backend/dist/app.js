@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const node_path_1 = __importDefault(require("node:path"));
 const cors_1 = __importDefault(require("cors"));
 const express_1 = __importDefault(require("express"));
+const multer_1 = __importDefault(require("multer"));
 const admin_routes_js_1 = __importDefault(require("./routes/admin.routes.js"));
 const articulo_routes_js_1 = __importDefault(require("./routes/articulo.routes.js"));
 const auth_routes_js_1 = __importDefault(require("./routes/auth.routes.js"));
@@ -13,6 +14,7 @@ const categoria_routes_js_1 = __importDefault(require("./routes/categoria.routes
 const contacto_routes_js_1 = __importDefault(require("./routes/contacto.routes.js"));
 const cuenta_routes_js_1 = __importDefault(require("./routes/cuenta.routes.js"));
 const favorito_routes_js_1 = __importDefault(require("./routes/favorito.routes.js"));
+const mensaje_routes_js_1 = __importDefault(require("./routes/mensaje.routes.js"));
 const notificacion_routes_js_1 = __importDefault(require("./routes/notificacion.routes.js"));
 const oferta_routes_js_1 = __importDefault(require("./routes/oferta.routes.js"));
 const app = (0, express_1.default)();
@@ -38,4 +40,40 @@ app.use("/api/ofertas", oferta_routes_js_1.default);
 app.use("/api/cuenta", cuenta_routes_js_1.default);
 app.use("/api/contactos", contacto_routes_js_1.default);
 app.use("/api/notificaciones", notificacion_routes_js_1.default);
+app.use("/api/mensajes", mensaje_routes_js_1.default);
+app.use((error, _request, response, next) => {
+    if (error instanceof
+        multer_1.default.MulterError) {
+        let mensaje = "No se pudo procesar la imagen";
+        if (error.code ===
+            "LIMIT_FILE_SIZE") {
+            mensaje =
+                "La imagen no puede superar los 5 MB";
+        }
+        if (error.code ===
+            "LIMIT_FILE_COUNT") {
+            mensaje =
+                "Solo puedes enviar una imagen por mensaje";
+        }
+        if (error.code ===
+            "LIMIT_UNEXPECTED_FILE") {
+            mensaje =
+                "El archivo enviado no es válido";
+        }
+        response.status(400).json({
+            ok: false,
+            message: mensaje,
+        });
+        return;
+    }
+    if (error instanceof Error) {
+        console.error("Error no controlado:", error);
+        response.status(400).json({
+            ok: false,
+            message: error.message,
+        });
+        return;
+    }
+    next(error);
+});
 exports.default = app;

@@ -5,4 +5,6 @@ const auth_controller_js_1 = require("../controllers/auth.controller.js");
 const authRouter = (0, express_1.Router)();
 authRouter.post("/login", auth_controller_js_1.login);
 authRouter.post("/registro", auth_controller_js_1.registrar);
+authRouter.post("/recuperar-contrasena", auth_controller_js_1.solicitarRecuperacionContrasena);
+authRouter.post("/restablecer-contrasena", auth_controller_js_1.restablecerContrasena);
 exports.default = authRouter;

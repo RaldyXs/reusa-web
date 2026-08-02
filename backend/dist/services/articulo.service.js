@@ -7,6 +7,7 @@ exports.crearArticulo = crearArticulo;
 exports.actualizarArticulo = actualizarArticulo;
 exports.actualizarEstadoArticulo = actualizarEstadoArticulo;
 exports.actualizarArchivadoArticulo = actualizarArchivadoArticulo;
+exports.eliminarArticulo = eliminarArticulo;
 const articulo_repository_js_1 = require("../repositories/articulo.repository.js");
 function convertirArticuloId(articuloId) {
     const idConvertido = Number(articuloId);
@@ -68,6 +69,11 @@ function validarDatosArticulo(entrada) {
         categoriaId,
     };
 }
+function verificarPropietario(articulo, vendedorId) {
+    if (Number(articulo.vendedor_id) !== vendedorId) {
+        throw new Error("No tienes permiso para modificar esta publicación");
+    }
+}
 async function buscarArticulos(termino, categoriaId) {
     const terminoLimpio = termino?.trim() ?? "";
     let categoriaConvertida = null;
@@ -108,12 +114,16 @@ async function crearArticulo(entrada) {
     }
     return articulo;
 }
-async function actualizarArticulo(articuloId, entrada) {
+async function actualizarArticulo(articuloId, entrada, vendedorId) {
     const idConvertido = convertirArticuloId(articuloId);
     const datos = validarDatosArticulo(entrada);
     const articuloActual = await (0, articulo_repository_js_1.obtenerArticuloPorIdEnBaseDeDatos)(idConvertido);
     if (!articuloActual) {
         throw new Error("El artículo no existe");
+    }
+    if (vendedorId !== undefined) {
+        const vendedorConvertido = convertirVendedorId(vendedorId);
+        verificarPropietario(articuloActual, vendedorConvertido);
     }
     const actualizado = await (0, articulo_repository_js_1.actualizarArticuloEnBaseDeDatos)(idConvertido, datos);
     if (!actualizado) {
@@ -125,7 +135,7 @@ async function actualizarArticulo(articuloId, entrada) {
     }
     return articuloActualizado;
 }
-async function actualizarEstadoArticulo(articuloId, entrada) {
+async function actualizarEstadoArticulo(articuloId, entrada, vendedorId) {
     const idConvertido = convertirArticuloId(articuloId);
     const estado = entrada.estado;
     if (estado !== "activo" &&
@@ -135,6 +145,10 @@ async function actualizarEstadoArticulo(articuloId, entrada) {
     const articuloActual = await (0, articulo_repository_js_1.obtenerArticuloPorIdEnBaseDeDatos)(idConvertido);
     if (!articuloActual) {
         throw new Error("El artículo no existe");
+    }
+    if (vendedorId !== undefined) {
+        const vendedorConvertido = convertirVendedorId(vendedorId);
+        verificarPropietario(articuloActual, vendedorConvertido);
     }
     const actualizado = await (0, articulo_repository_js_1.actualizarEstadoArticuloEnBaseDeDatos)(idConvertido, estado);
     if (!actualizado) {
@@ -146,7 +160,7 @@ async function actualizarEstadoArticulo(articuloId, entrada) {
     }
     return articuloActualizado;
 }
-async function actualizarArchivadoArticulo(articuloId, entrada) {
+async function actualizarArchivadoArticulo(articuloId, entrada, vendedorId) {
     const idConvertido = convertirArticuloId(articuloId);
     const valorArchivado = entrada.archivado;
     if (valorArchivado !== true &&
@@ -161,6 +175,10 @@ async function actualizarArchivadoArticulo(articuloId, entrada) {
     if (!articuloActual) {
         throw new Error("El artículo no existe");
     }
+    if (vendedorId !== undefined) {
+        const vendedorConvertido = convertirVendedorId(vendedorId);
+        verificarPropietario(articuloActual, vendedorConvertido);
+    }
     const actualizado = await (0, articulo_repository_js_1.actualizarArchivadoArticuloEnBaseDeDatos)(idConvertido, archivado);
     if (!actualizado) {
         throw new Error("No se pudo actualizar el archivo de la publicación");
@@ -170,4 +188,17 @@ async function actualizarArchivadoArticulo(articuloId, entrada) {
         throw new Error("La publicación fue actualizada, pero no pudo recuperarse");
     }
     return articuloActualizado;
+}
+async function eliminarArticulo(articuloId, vendedorId) {
+    const idConvertido = convertirArticuloId(articuloId);
+    const vendedorConvertido = convertirVendedorId(vendedorId);
+    const articuloActual = await (0, articulo_repository_js_1.obtenerArticuloPorIdEnBaseDeDatos)(idConvertido);
+    if (!articuloActual) {
+        throw new Error("El artículo no existe o ya fue eliminado");
+    }
+    verificarPropietario(articuloActual, vendedorConvertido);
+    const eliminado = await (0, articulo_repository_js_1.eliminarArticuloLogicamenteEnBaseDeDatos)(idConvertido, vendedorConvertido);
+    if (!eliminado) {
+        throw new Error("No se pudo eliminar la publicación");
+    }
 }

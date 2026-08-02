@@ -92,6 +92,34 @@ function limpiarTextoOpcional(
   return textoLimpio;
 }
 
+function validarMostrarContacto(
+  valor: unknown,
+): boolean {
+  if (typeof valor === "boolean") {
+    return valor;
+  }
+
+  if (
+    valor === 1 ||
+    valor === "1" ||
+    valor === "true"
+  ) {
+    return true;
+  }
+
+  if (
+    valor === 0 ||
+    valor === "0" ||
+    valor === "false"
+  ) {
+    return false;
+  }
+
+  throw new Error(
+    "La preferencia de contacto no es válida",
+  );
+}
+
 export async function obtenerPerfilUsuario(
   usuarioId: number,
 ): Promise<PerfilUsuario> {
@@ -113,8 +141,13 @@ export async function obtenerPerfilUsuario(
 
   return {
     ...perfil,
+
     activo: Number(
       perfil.activo,
+    ),
+
+    mostrar_contacto: Number(
+      perfil.mostrar_contacto ?? 0,
     ),
   };
 }
@@ -125,6 +158,7 @@ export async function actualizarPerfilUsuario(
   apellido: unknown,
   telefono: unknown,
   ubicacion: unknown,
+  mostrarContacto: unknown,
 ): Promise<PerfilUsuario> {
   validarIdentificador(
     usuarioId,
@@ -159,6 +193,11 @@ export async function actualizarPerfilUsuario(
       200,
     );
 
+  const mostrarContactoValidado =
+    validarMostrarContacto(
+      mostrarContacto,
+    );
+
   const perfilActual =
     await obtenerPerfilUsuarioDesdeBaseDeDatos(
       usuarioId,
@@ -178,6 +217,8 @@ export async function actualizarPerfilUsuario(
         apellido: apellidoLimpio,
         telefono: telefonoLimpio,
         ubicacion: ubicacionLimpia,
+        mostrarContacto:
+          mostrarContactoValidado,
       },
     );
 

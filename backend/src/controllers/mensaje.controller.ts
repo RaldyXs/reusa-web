@@ -8,6 +8,9 @@ import type {
 
 import {
   crearOObtenerConversacion,
+  editarMensaje,
+  eliminarConversacion,
+  eliminarMensaje,
   enviarMensaje,
   obtenerConversaciones,
   obtenerMensajes,
@@ -51,6 +54,27 @@ function obtenerConversacionId(
   }
 
   return conversacionId;
+}
+
+function obtenerMensajeId(
+  request: RequestAutenticado,
+): number {
+  const mensajeId = Number(
+    request.params.mensajeId,
+  );
+
+  if (
+    !Number.isInteger(
+      mensajeId,
+    ) ||
+    mensajeId <= 0
+  ) {
+    throw new Error(
+      "El identificador del mensaje no es válido",
+    );
+  }
+
+  return mensajeId;
 }
 
 function obtenerArticuloId(
@@ -116,6 +140,27 @@ function obtenerCodigoEstado(
     ) ||
     mensaje.includes(
       "contigo mismo",
+    ) ||
+    mensaje.includes(
+      "Debes seleccionar una imagen",
+    ) ||
+    mensaje.includes(
+      "no puede contener una imagen",
+    ) ||
+    mensaje.includes(
+      "Solo se pueden editar",
+    ) ||
+    mensaje.includes(
+      "No puedes editar",
+    ) ||
+    mensaje.includes(
+      "ya fue eliminado",
+    ) ||
+    mensaje.includes(
+      "debe ser diferente",
+    ) ||
+    mensaje.includes(
+      "demasiado larga",
     )
   ) {
     return 400;
@@ -281,11 +326,31 @@ export async function registrarMensaje(
         request,
       );
 
+    const archivoImagen =
+      request.file;
+
+    const urlImagen =
+      archivoImagen
+        ? `${request.protocol}://${request.get(
+            "host",
+          )}/uploads/mensajes/${
+            archivoImagen.filename
+          }`
+        : request.body.urlImagen;
+
+    const tipo =
+      archivoImagen
+        ? "imagen"
+        : request.body.tipo ??
+          "texto";
+
     const resultado =
       await enviarMensaje(
         conversacionId,
         remitenteId,
         request.body.contenido,
+        tipo,
+        urlImagen,
       );
 
     response.status(201).json({
@@ -308,6 +373,153 @@ export async function registrarMensaje(
     if (codigoEstado === 500) {
       console.error(
         "Error al enviar mensaje:",
+        errorDesconocido,
+      );
+    }
+
+    response
+      .status(codigoEstado)
+      .json({
+        ok: false,
+        message: mensaje,
+      });
+  }
+}
+
+export async function actualizarMensaje(
+  request: RequestAutenticado,
+  response: Response,
+): Promise<void> {
+  try {
+    const usuarioId =
+      obtenerUsuarioId(request);
+
+    const mensajeId =
+      obtenerMensajeId(request);
+
+    await editarMensaje(
+      mensajeId,
+      usuarioId,
+      request.body.contenido,
+    );
+
+    response.status(200).json({
+      ok: true,
+      message:
+        "Mensaje editado correctamente",
+    });
+  } catch (errorDesconocido) {
+    const mensaje =
+      errorDesconocido instanceof Error
+        ? errorDesconocido.message
+        : "No se pudo editar el mensaje";
+
+    const codigoEstado =
+      obtenerCodigoEstado(
+        mensaje,
+      );
+
+    if (codigoEstado === 500) {
+      console.error(
+        "Error al editar mensaje:",
+        errorDesconocido,
+      );
+    }
+
+    response
+      .status(codigoEstado)
+      .json({
+        ok: false,
+        message: mensaje,
+      });
+  }
+}
+
+export async function borrarMensaje(
+  request: RequestAutenticado,
+  response: Response,
+): Promise<void> {
+  try {
+    const usuarioId =
+      obtenerUsuarioId(request);
+
+    const mensajeId =
+      obtenerMensajeId(request);
+
+    await eliminarMensaje(
+      mensajeId,
+      usuarioId,
+    );
+
+    response.status(200).json({
+      ok: true,
+      message:
+        "Mensaje eliminado correctamente",
+    });
+  } catch (errorDesconocido) {
+    const mensaje =
+      errorDesconocido instanceof Error
+        ? errorDesconocido.message
+        : "No se pudo eliminar el mensaje";
+
+    const codigoEstado =
+      obtenerCodigoEstado(
+        mensaje,
+      );
+
+    if (codigoEstado === 500) {
+      console.error(
+        "Error al eliminar mensaje:",
+        errorDesconocido,
+      );
+    }
+
+    response
+      .status(codigoEstado)
+      .json({
+        ok: false,
+        message: mensaje,
+      });
+  }
+}
+
+export async function borrarConversacion(
+  request: RequestAutenticado,
+  response: Response,
+): Promise<void> {
+  try {
+    const usuarioId =
+      obtenerUsuarioId(request);
+
+    const conversacionId =
+      obtenerConversacionId(
+        request,
+      );
+
+    await eliminarConversacion(
+      conversacionId,
+      usuarioId,
+    );
+
+    response.status(200).json({
+      ok: true,
+      message:
+        "Conversación eliminada correctamente",
+    });
+  } catch (errorDesconocido) {
+    const mensaje =
+      errorDesconocido instanceof Error
+        ? errorDesconocido.message
+        : "No se pudo eliminar la conversación";
+
+    const codigoEstado =
+      obtenerCodigoEstado(
+        mensaje,
+      );
+
+    if (codigoEstado === 500) {
+      console.error(
+        "Error al eliminar conversación:",
         errorDesconocido,
       );
     }

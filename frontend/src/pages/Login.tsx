@@ -1,4 +1,6 @@
 import {
+  Eye,
+  EyeOff,
   LockKeyhole,
   LogIn,
   Mail,
@@ -28,14 +30,30 @@ function Login() {
     logout,
   } = useAuth();
 
-  const [email, setEmail] = useState("");
-  const [contrasena, setContrasena] =
-    useState("");
+  const [
+    email,
+    setEmail,
+  ] = useState("");
 
-  const [cargando, setCargando] =
-    useState(false);
+  const [
+    contrasena,
+    setContrasena,
+  ] = useState("");
 
-  const [error, setError] = useState("");
+  const [
+    mostrarContrasena,
+    setMostrarContrasena,
+  ] = useState(false);
+
+  const [
+    cargando,
+    setCargando,
+  ] = useState(false);
+
+  const [
+    error,
+    setError,
+  ] = useState("");
 
   async function manejarEnvio(
     event: FormEvent<HTMLFormElement>,
@@ -44,7 +62,10 @@ function Login() {
 
     setError("");
 
-    if (!email.trim() || !contrasena) {
+    if (
+      !email.trim() ||
+      !contrasena
+    ) {
       setError(
         "Debes escribir el correo y la contraseña.",
       );
@@ -61,10 +82,13 @@ function Login() {
        */
       logout();
 
-      const usuarioAutenticado = await login(
-        email.trim().toLowerCase(),
-        contrasena,
-      );
+      const usuarioAutenticado =
+        await login(
+          email
+            .trim()
+            .toLowerCase(),
+          contrasena,
+        );
 
       if (
         usuarioAutenticado.rol ===
@@ -84,14 +108,21 @@ function Login() {
 
       const destinoAnterior =
         estado?.desde &&
-        !estado.desde.startsWith("/admin")
+        !estado.desde.startsWith(
+          "/admin",
+        )
           ? estado.desde
           : "/";
 
-      navigate(destinoAnterior, {
-        replace: true,
-      });
-    } catch (errorDesconocido) {
+      navigate(
+        destinoAnterior,
+        {
+          replace: true,
+        },
+      );
+    } catch (
+      errorDesconocido
+    ) {
       setError(
         errorDesconocido instanceof Error
           ? errorDesconocido.message
@@ -105,13 +136,17 @@ function Login() {
   return (
     <main className="login-page">
       <section className="login-card">
-        <div className="login-logo">R</div>
+        <div className="login-logo">
+          R
+        </div>
 
         <span className="login-eyebrow">
           RE-USA MARKETPLACE
         </span>
 
-        <h1>Iniciar sesión</h1>
+        <h1>
+          Iniciar sesión
+        </h1>
 
         <p className="login-description">
           Accede a tu cuenta para publicar,
@@ -129,10 +164,14 @@ function Login() {
 
         <form
           className="login-form"
-          onSubmit={manejarEnvio}
+          onSubmit={
+            manejarEnvio
+          }
         >
           <label>
-            <span>Correo electrónico</span>
+            <span>
+              Correo electrónico
+            </span>
 
             <div className="login-input">
               <Mail size={18} />
@@ -141,7 +180,9 @@ function Login() {
                 type="email"
                 value={email}
                 onChange={(event) =>
-                  setEmail(event.target.value)
+                  setEmail(
+                    event.target.value,
+                  )
                 }
                 placeholder="correo@ejemplo.com"
                 autoComplete="email"
@@ -150,14 +191,24 @@ function Login() {
           </label>
 
           <label>
-            <span>Contraseña</span>
+            <span>
+              Contraseña
+            </span>
 
-            <div className="login-input">
-              <LockKeyhole size={18} />
+            <div className="login-input login-input--password">
+              <LockKeyhole
+                size={18}
+              />
 
               <input
-                type="password"
-                value={contrasena}
+                type={
+                  mostrarContrasena
+                    ? "text"
+                    : "password"
+                }
+                value={
+                  contrasena
+                }
                 onChange={(event) =>
                   setContrasena(
                     event.target.value,
@@ -166,8 +217,54 @@ function Login() {
                 placeholder="Escribe tu contraseña"
                 autoComplete="current-password"
               />
+
+              <button
+                className="login-password-toggle"
+                type="button"
+                aria-label={
+                  mostrarContrasena
+                    ? "Ocultar contraseña"
+                    : "Mostrar contraseña"
+                }
+                title={
+                  mostrarContrasena
+                    ? "Ocultar contraseña"
+                    : "Mostrar contraseña"
+                }
+                onClick={() =>
+                  setMostrarContrasena(
+                    (
+                      estadoActual,
+                    ) =>
+                      !estadoActual,
+                  )
+                }
+              >
+                {mostrarContrasena ? (
+                  <EyeOff
+                    size={18}
+                  />
+                ) : (
+                  <Eye
+                    size={18}
+                  />
+                )}
+              </button>
             </div>
           </label>
+
+          <div className="login-forgot-password">
+            <button
+              type="button"
+              onClick={() =>
+                navigate(
+                  "/recuperar-contrasena",
+                )
+              }
+            >
+              ¿Olvidaste tu contraseña?
+            </button>
+          </div>
 
           <button
             type="submit"
@@ -185,7 +282,9 @@ function Login() {
           className="login-back"
           type="button"
           onClick={() =>
-            navigate("/registro")
+            navigate(
+              "/registro",
+            )
           }
         >
           <UserPlus size={17} />
@@ -195,7 +294,9 @@ function Login() {
         <button
           className="login-back"
           type="button"
-          onClick={() => navigate("/")}
+          onClick={() =>
+            navigate("/")
+          }
         >
           Volver al Marketplace
         </button>

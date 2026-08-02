@@ -1,5 +1,7 @@
 import {
   CheckCircle2,
+  Eye,
+  EyeOff,
   KeyRound,
   MapPin,
   Phone,
@@ -21,6 +23,10 @@ import {
   obtenerPerfil,
 } from "../services/cuentaService";
 
+import {
+  PROVINCIAS_REPUBLICA_DOMINICANA,
+} from "../data/provincias";
+
 function Settings() {
   const [nombre, setNombre] =
     useState("");
@@ -36,6 +42,11 @@ function Settings() {
 
   const [ubicacion, setUbicacion] =
     useState("");
+
+  const [
+    mostrarContacto,
+    setMostrarContacto,
+  ] = useState(false);
 
   const [
     contrasenaActual,
@@ -86,7 +97,7 @@ function Settings() {
   useEffect(() => {
     let componenteActivo = true;
 
-    async function cargarPerfil() {
+    async function cargarPerfil(): Promise<void> {
       try {
         setCargando(true);
         setErrorPerfil("");
@@ -106,6 +117,11 @@ function Settings() {
         );
         setUbicacion(
           perfil.ubicacion ?? "",
+        );
+        setMostrarContacto(
+          Number(
+            perfil.mostrar_contacto ?? 0,
+          ) === 1,
         );
       } catch (errorDesconocido) {
         const mensaje =
@@ -135,6 +151,20 @@ function Settings() {
   ): Promise<void> {
     evento.preventDefault();
 
+    const ubicacionValida =
+      PROVINCIAS_REPUBLICA_DOMINICANA.some(
+        (provincia) => provincia === ubicacion,
+      );
+
+    if (!ubicacionValida) {
+      setErrorPerfil(
+        "Debes seleccionar una provincia válida.",
+      );
+      setMensajePerfil("");
+
+      return;
+    }
+
     try {
       setGuardandoPerfil(true);
       setErrorPerfil("");
@@ -146,12 +176,13 @@ function Settings() {
           apellido,
           telefono,
           ubicacion,
+          mostrarContacto,
         });
 
-        actualizarUsuarioSesion({
-          nombre: perfil.nombre,
-          apellido: perfil.apellido,
-        });
+      actualizarUsuarioSesion({
+        nombre: perfil.nombre,
+        apellido: perfil.apellido,
+      });
 
       setNombre(perfil.nombre);
       setApellido(perfil.apellido);
@@ -160,6 +191,11 @@ function Settings() {
       );
       setUbicacion(
         perfil.ubicacion ?? "",
+      );
+      setMostrarContacto(
+        Number(
+          perfil.mostrar_contacto ?? 0,
+        ) === 1,
       );
 
       setMensajePerfil(
@@ -208,9 +244,7 @@ function Settings() {
 
       setErrorContrasena(mensaje);
     } finally {
-      setGuardandoContrasena(
-        false,
-      );
+      setGuardandoContrasena(false);
     }
   }
 
@@ -253,8 +287,8 @@ function Settings() {
               <h2>Información personal</h2>
 
               <p>
-                Datos visibles en tu perfil
-                y publicaciones.
+                Controla los datos de tu
+                perfil y publicaciones.
               </p>
             </div>
           </header>
@@ -349,21 +383,70 @@ function Settings() {
             <label>
               <span>
                 <MapPin size={15} />
-                Ubicación
+                Provincia
               </span>
 
-              <input
-                type="text"
+              <select
                 value={ubicacion}
-                maxLength={200}
-                placeholder="Santo Domingo"
+                required
                 onChange={(evento) =>
                   setUbicacion(
                     evento.target.value,
                   )
                 }
-              />
+              >
+                <option value="">
+                  Selecciona tu provincia
+                </option>
+
+                {PROVINCIAS_REPUBLICA_DOMINICANA.map(
+                  (provincia) => (
+                    <option
+                      key={provincia}
+                      value={provincia}
+                    >
+                      {provincia}
+                    </option>
+                  ),
+                )}
+              </select>
             </label>
+
+            <div className="settings-privacy settings-form-grid__full">
+              <div className="settings-privacy__icon">
+                {mostrarContacto ? (
+                  <Eye size={20} />
+                ) : (
+                  <EyeOff size={20} />
+                )}
+              </div>
+
+              <div className="settings-privacy__content">
+                <strong>
+                  Mostrar mi información de contacto
+                </strong>
+
+                <p>
+                  Permite que otros usuarios
+                  vean tu correo y teléfono
+                  en tus publicaciones.
+                </p>
+              </div>
+
+              <label className="settings-switch">
+                <input
+                  type="checkbox"
+                  checked={mostrarContacto}
+                  onChange={(evento) =>
+                    setMostrarContacto(
+                      evento.target.checked,
+                    )
+                  }
+                />
+
+                <span aria-hidden="true" />
+              </label>
+            </div>
           </div>
 
           <button

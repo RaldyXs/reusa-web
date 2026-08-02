@@ -7,6 +7,7 @@ exports.actualizarEstadoUsuarioDesdeBaseDeDatos = actualizarEstadoUsuarioDesdeBa
 exports.obtenerPublicacionesAdministracionDesdeBaseDeDatos = obtenerPublicacionesAdministracionDesdeBaseDeDatos;
 exports.obtenerPublicacionAdministracionPorIdDesdeBaseDeDatos = obtenerPublicacionAdministracionPorIdDesdeBaseDeDatos;
 exports.actualizarEstadoPublicacionDesdeBaseDeDatos = actualizarEstadoPublicacionDesdeBaseDeDatos;
+exports.obtenerOfertasAdministracionDesdeBaseDeDatos = obtenerOfertasAdministracionDesdeBaseDeDatos;
 exports.obtenerCategoriasAdministracionDesdeBaseDeDatos = obtenerCategoriasAdministracionDesdeBaseDeDatos;
 exports.obtenerCategoriaAdministracionPorIdDesdeBaseDeDatos = obtenerCategoriaAdministracionPorIdDesdeBaseDeDatos;
 exports.obtenerCategoriaAdministracionPorNombreDesdeBaseDeDatos = obtenerCategoriaAdministracionPorNombreDesdeBaseDeDatos;
@@ -42,19 +43,24 @@ async function obtenerResumenAdministracionDesdeBaseDeDatos() {
             FROM articulos
             WHERE estado = 'activo'
               AND archivado = 0
+              AND eliminado = 0
           ) AS publicaciones_activas,
 
           (
             SELECT COUNT(*)
             FROM articulos
             WHERE estado = 'vendido'
+              AND eliminado = 0
           ) AS publicaciones_vendidas,
 
           (
             SELECT COUNT(*)
             FROM articulos
-            WHERE estado = 'archivado'
-               OR archivado = 1
+            WHERE (
+              estado = 'archivado'
+              OR archivado = 1
+            )
+            AND eliminado = 0
           ) AS publicaciones_archivadas,
 
           (
@@ -182,12 +188,79 @@ async function actualizarEstadoPublicacionDesdeBaseDeDatos(articuloId, estado) {
           estado = ?,
           archivado = ?
         WHERE articulo_id = ?
+          AND eliminado = 0
       `, [
         estado,
         archivado,
         articuloId,
     ]);
     return resultado.affectedRows > 0;
+}
+async function obtenerOfertasAdministracionDesdeBaseDeDatos() {
+    const [filas] = await database_js_1.pool.execute(`
+        SELECT
+          o.oferta_id,
+
+          a.articulo_id,
+          a.titulo AS articulo_titulo,
+          a.precio AS precio_publicacion,
+          a.estado AS estado_articulo,
+          a.archivado AS articulo_archivado,
+          a.eliminado AS articulo_eliminado,
+
+          comprador.usuario_id
+            AS comprador_id,
+
+          CONCAT(
+            comprador.nombre,
+            ' ',
+            comprador.apellido
+          ) AS comprador_nombre,
+
+          comprador.email
+            AS comprador_email,
+
+          vendedor.usuario_id
+            AS vendedor_id,
+
+          CONCAT(
+            vendedor.nombre,
+            ' ',
+            vendedor.apellido
+          ) AS vendedor_nombre,
+
+          vendedor.email
+            AS vendedor_email,
+
+          o.precio_ofertado AS precio_oferta,
+          o.mensaje,
+
+          o.precio_contraoferta,
+          o.mensaje_contraoferta,
+
+          o.estado,
+          o.fecha_oferta,
+          o.fecha_respuesta
+
+        FROM ofertas AS o
+
+        INNER JOIN articulos AS a
+          ON a.articulo_id =
+            o.articulo_id
+
+        INNER JOIN usuarios AS comprador
+          ON comprador.usuario_id =
+            o.comprador_id
+
+        INNER JOIN usuarios AS vendedor
+          ON vendedor.usuario_id =
+            a.vendedor_id
+
+        ORDER BY
+          o.fecha_oferta DESC,
+          o.oferta_id DESC
+      `);
+    return filas;
 }
 async function obtenerCategoriasAdministracionDesdeBaseDeDatos() {
     const [filas] = await database_js_1.pool.execute(`
@@ -332,6 +405,7 @@ async function obtenerPublicacionesPorMesDesdeBaseDeDatos() {
             ),
             INTERVAL 11 MONTH
           )
+          AND eliminado = 0
         GROUP BY
           YEAR(fecha_publicacion),
           MONTH(fecha_publicacion),
@@ -362,6 +436,7 @@ async function obtenerPublicacionesPorEstadoDesdeBaseDeDatos() {
             END AS estado,
             COUNT(*) AS total
           FROM articulos
+          WHERE eliminado = 0
           GROUP BY
             CASE
               WHEN estado = 'archivado'
@@ -392,6 +467,7 @@ async function obtenerPublicacionesPorCategoriaDesdeBaseDeDatos() {
         LEFT JOIN articulos AS a
           ON a.categoria_id =
             c.categoria_id
+          AND a.eliminado = 0
         GROUP BY
           c.categoria_id,
           c.nombre

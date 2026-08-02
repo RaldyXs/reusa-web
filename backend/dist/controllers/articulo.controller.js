@@ -10,6 +10,7 @@ exports.publicarArticulo = publicarArticulo;
 exports.editarArticulo = editarArticulo;
 exports.cambiarEstadoArticulo = cambiarEstadoArticulo;
 exports.cambiarArchivadoArticulo = cambiarArchivadoArticulo;
+exports.eliminarPublicacion = eliminarPublicacion;
 exports.guardarImagenesArticulo = guardarImagenesArticulo;
 exports.eliminarImagenArticulo = eliminarImagenArticulo;
 const promises_1 = __importDefault(require("node:fs/promises"));
@@ -33,11 +34,11 @@ function usuarioPuedeGestionarArticulo(request, vendedorId) {
     if (!request.usuario) {
         return false;
     }
-    if (request.usuario.rol === "administrador") {
+    if (request.usuario.rol ===
+        "administrador") {
         return true;
     }
-    return (Number(request.usuario.usuarioId) ===
-        Number(vendedorId));
+    return (Number(request.usuario.usuarioId) === Number(vendedorId));
 }
 async function eliminarArchivos(archivos) {
     await Promise.allSettled(archivos.map((archivo) => promises_1.default.unlink(archivo.path)));
@@ -62,10 +63,12 @@ async function eliminarArchivoDesdeUrl(urlImagen) {
 }
 async function obtenerArticulos(request, response) {
     try {
-        const termino = typeof request.query.termino === "string"
+        const termino = typeof request.query.termino ===
+            "string"
             ? request.query.termino
             : undefined;
-        const categoriaId = typeof request.query.categoriaId === "string"
+        const categoriaId = typeof request.query
+            .categoriaId === "string"
             ? request.query.categoriaId
             : undefined;
         const articulos = await (0, articulo_service_js_1.buscarArticulos)(termino, categoriaId);
@@ -107,7 +110,8 @@ async function obtenerMisPublicaciones(request, response) {
 }
 async function obtenerArticulo(request, response) {
     try {
-        const id = typeof request.params.id === "string"
+        const id = typeof request.params.id ===
+            "string"
             ? request.params.id
             : undefined;
         if (!id) {
@@ -172,7 +176,8 @@ async function editarArticulo(request, response) {
             });
             return;
         }
-        const id = typeof request.params.id === "string"
+        const id = typeof request.params.id ===
+            "string"
             ? request.params.id
             : undefined;
         const articuloId = convertirArticuloId(id);
@@ -200,10 +205,13 @@ async function editarArticulo(request, response) {
     }
     catch (error) {
         const mensaje = obtenerMensajeError(error);
-        const estadoHttp = mensaje === "El artículo no existe"
+        const estadoHttp = mensaje ===
+            "El artículo no existe"
             ? 404
             : 400;
-        response.status(estadoHttp).json({
+        response
+            .status(estadoHttp)
+            .json({
             ok: false,
             message: mensaje,
         });
@@ -218,7 +226,8 @@ async function cambiarEstadoArticulo(request, response) {
             });
             return;
         }
-        const id = typeof request.params.id === "string"
+        const id = typeof request.params.id ===
+            "string"
             ? request.params.id
             : undefined;
         const articuloId = convertirArticuloId(id);
@@ -246,10 +255,13 @@ async function cambiarEstadoArticulo(request, response) {
     }
     catch (error) {
         const mensaje = obtenerMensajeError(error);
-        const estadoHttp = mensaje === "El artículo no existe"
+        const estadoHttp = mensaje ===
+            "El artículo no existe"
             ? 404
             : 400;
-        response.status(estadoHttp).json({
+        response
+            .status(estadoHttp)
+            .json({
             ok: false,
             message: mensaje,
         });
@@ -264,7 +276,8 @@ async function cambiarArchivadoArticulo(request, response) {
             });
             return;
         }
-        const id = typeof request.params.id === "string"
+        const id = typeof request.params.id ===
+            "string"
             ? request.params.id
             : undefined;
         const articuloId = convertirArticuloId(id);
@@ -295,10 +308,67 @@ async function cambiarArchivadoArticulo(request, response) {
     }
     catch (error) {
         const mensaje = obtenerMensajeError(error);
-        const estadoHttp = mensaje === "El artículo no existe"
+        const estadoHttp = mensaje ===
+            "El artículo no existe"
             ? 404
             : 400;
-        response.status(estadoHttp).json({
+        response
+            .status(estadoHttp)
+            .json({
+            ok: false,
+            message: mensaje,
+        });
+    }
+}
+async function eliminarPublicacion(request, response) {
+    try {
+        if (!request.usuario) {
+            response.status(401).json({
+                ok: false,
+                message: "Debes iniciar sesión para eliminar publicaciones",
+            });
+            return;
+        }
+        const id = typeof request.params.id ===
+            "string"
+            ? request.params.id
+            : undefined;
+        const articuloId = convertirArticuloId(id);
+        const articuloExistente = await (0, articulo_service_js_1.obtenerArticuloPorId)(String(articuloId));
+        if (!articuloExistente) {
+            response.status(404).json({
+                ok: false,
+                message: "El artículo no existe o ya fue eliminado",
+            });
+            return;
+        }
+        const usuarioId = Number(request.usuario.usuarioId);
+        if (Number(articuloExistente.vendedor_id) !== usuarioId) {
+            response.status(403).json({
+                ok: false,
+                message: "No tienes permiso para eliminar esta publicación",
+            });
+            return;
+        }
+        await (0, articulo_service_js_1.eliminarArticulo)(String(articuloId), usuarioId);
+        response.status(200).json({
+            ok: true,
+            message: "Publicación eliminada correctamente",
+        });
+    }
+    catch (error) {
+        const mensaje = obtenerMensajeError(error);
+        let estadoHttp = 400;
+        if (mensaje.includes("no existe") ||
+            mensaje.includes("ya fue eliminado")) {
+            estadoHttp = 404;
+        }
+        if (mensaje.includes("No tienes permiso")) {
+            estadoHttp = 403;
+        }
+        response
+            .status(estadoHttp)
+            .json({
             ok: false,
             message: mensaje,
         });
@@ -316,7 +386,8 @@ async function guardarImagenesArticulo(request, response) {
             });
             return;
         }
-        const id = typeof request.params.id === "string"
+        const id = typeof request.params.id ===
+            "string"
             ? request.params.id
             : undefined;
         const articuloId = convertirArticuloId(id);
@@ -345,7 +416,8 @@ async function guardarImagenesArticulo(request, response) {
             return;
         }
         const cantidadActual = await (0, articulo_repository_js_1.contarImagenesArticulo)(articuloId);
-        if (cantidadActual + archivos.length >
+        if (cantidadActual +
+            archivos.length >
             5) {
             await eliminarArchivos(archivos);
             response.status(400).json({
@@ -359,7 +431,8 @@ async function guardarImagenesArticulo(request, response) {
             urlImagen: `${baseUrl}/uploads/articulos/${archivo.filename}`,
             esPrincipal: cantidadActual === 0 &&
                 indice === 0,
-            orden: cantidadActual + indice,
+            orden: cantidadActual +
+                indice,
         }));
         await (0, articulo_repository_js_1.guardarImagenesArticuloEnBaseDeDatos)(articuloId, imagenes);
         const articuloActualizado = await (0, articulo_service_js_1.obtenerArticuloPorId)(String(articuloId));
@@ -387,12 +460,16 @@ async function eliminarImagenArticulo(request, response) {
             });
             return;
         }
-        const id = typeof request.params.id === "string"
+        const id = typeof request.params.id ===
+            "string"
             ? request.params.id
             : undefined;
         const articuloId = convertirArticuloId(id);
-        const urlImagen = typeof request.body.urlImagen === "string"
-            ? request.body.urlImagen.trim()
+        const urlImagen = typeof request.body
+            .urlImagen === "string"
+            ? request.body
+                .urlImagen
+                .trim()
             : "";
         if (!urlImagen) {
             response.status(400).json({

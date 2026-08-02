@@ -21,6 +21,10 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 
 import {
+  obtenerConversaciones,
+} from "../services/mensajeService";
+
+import {
   marcarNotificacionComoLeida,
   marcarTodasComoLeidas,
   obtenerCantidadNoLeidas,
@@ -28,10 +32,14 @@ import {
   type Notificacion,
 } from "../services/notificacionService";
 
+const EVENTO_MENSAJES_ACTUALIZADOS =
+  "reusa-mensajes-actualizados";
+
 function formatearFechaNotificacion(
   fecha: string,
 ): string {
-  const fechaNotificacion = new Date(fecha);
+  const fechaNotificacion =
+    new Date(fecha);
 
   if (
     Number.isNaN(
@@ -87,6 +95,11 @@ function Topbar() {
   ] = useState(0);
 
   const [
+    cantidadMensajesNoLeidos,
+    setCantidadMensajesNoLeidos,
+  ] = useState(0);
+
+  const [
     cargandoNotificaciones,
     setCargandoNotificaciones,
   ] = useState(false);
@@ -97,42 +110,116 @@ function Topbar() {
   ] = useState("");
 
   const cargarNotificaciones =
-    useCallback(async (): Promise<void> => {
-      if (!autenticado || !usuario) {
-        return;
-      }
+    useCallback(
+      async (): Promise<void> => {
+        if (
+          !autenticado ||
+          !usuario
+        ) {
+          return;
+        }
 
-      try {
-        setCargandoNotificaciones(true);
-        setErrorNotificaciones("");
+        try {
+          setCargandoNotificaciones(
+            true,
+          );
 
-        const datos =
-          await obtenerNotificaciones();
+          setErrorNotificaciones("");
 
-        setNotificaciones(datos);
+          const datos =
+            await obtenerNotificaciones();
 
-        const noLeidas = datos.filter(
-          (notificacion) =>
-            Number(
-              notificacion.leida,
-            ) === 0,
-        ).length;
+          setNotificaciones(datos);
 
-        setCantidadNoLeidas(noLeidas);
-      } catch (errorDesconocido) {
-        const mensaje =
-          errorDesconocido instanceof Error
-            ? errorDesconocido.message
-            : "No se pudieron cargar las notificaciones";
+          const noLeidas =
+            datos.filter(
+              (notificacion) =>
+                Number(
+                  notificacion.leida,
+                ) === 0,
+            ).length;
 
-        setErrorNotificaciones(mensaje);
-      } finally {
-        setCargandoNotificaciones(false);
-      }
-    }, [autenticado, usuario]);
+          setCantidadNoLeidas(
+            noLeidas,
+          );
+        } catch (
+          errorDesconocido
+        ) {
+          const mensaje =
+            errorDesconocido instanceof Error
+              ? errorDesconocido.message
+              : "No se pudieron cargar las notificaciones";
+
+          setErrorNotificaciones(
+            mensaje,
+          );
+        } finally {
+          setCargandoNotificaciones(
+            false,
+          );
+        }
+      },
+      [
+        autenticado,
+        usuario,
+      ],
+    );
+
+  const cargarCantidadMensajes =
+    useCallback(
+      async (): Promise<void> => {
+        if (
+          !autenticado ||
+          !usuario
+        ) {
+          setCantidadMensajesNoLeidos(
+            0,
+          );
+
+          return;
+        }
+
+        try {
+          const conversaciones =
+            await obtenerConversaciones();
+
+          const cantidad =
+            conversaciones.reduce(
+              (
+                total,
+                conversacion,
+              ) =>
+                total +
+                Number(
+                  conversacion.mensajes_no_leidos ??
+                    0,
+                ),
+              0,
+            );
+
+          setCantidadMensajesNoLeidos(
+            cantidad,
+          );
+        } catch (
+          errorDesconocido
+        ) {
+          console.error(
+            "No se pudo cargar el resumen de mensajes:",
+            errorDesconocido,
+          );
+        }
+      },
+      [
+        autenticado,
+        usuario,
+      ],
+    );
 
   useEffect(() => {
-    if (!autenticado || !usuario) {
+    if (
+      !autenticado ||
+      !usuario
+    ) {
       return;
     }
 
@@ -141,20 +228,92 @@ function Topbar() {
     obtenerCantidadNoLeidas()
       .then((cantidad) => {
         if (componenteActivo) {
-          setCantidadNoLeidas(cantidad);
+          setCantidadNoLeidas(
+            cantidad,
+          );
         }
       })
-      .catch((errorDesconocido) => {
-        console.error(
-          "No se pudo cargar el resumen de notificaciones:",
-          errorDesconocido,
-        );
-      });
+      .catch(
+        (errorDesconocido) => {
+          console.error(
+            "No se pudo cargar el resumen de notificaciones:",
+            errorDesconocido,
+          );
+        },
+      );
 
     return () => {
       componenteActivo = false;
     };
-  }, [autenticado, usuario]);
+  }, [
+    autenticado,
+    usuario,
+  ]);
+
+  useEffect(() => {
+    const temporizadorInicial =
+      window.setTimeout(() => {
+        void cargarCantidadMensajes();
+      }, 0);
+
+    const intervalo =
+      window.setInterval(() => {
+        void cargarCantidadMensajes();
+      }, 15000);
+
+    function manejarMensajesActualizados(): void {
+      void cargarCantidadMensajes();
+    }
+
+    function manejarVisibilidad(): void {
+      if (
+        document.visibilityState ===
+        "visible"
+      ) {
+        void cargarCantidadMensajes();
+      }
+    }
+
+    window.addEventListener(
+      EVENTO_MENSAJES_ACTUALIZADOS,
+      manejarMensajesActualizados,
+    );
+
+    window.addEventListener(
+      "focus",
+      manejarMensajesActualizados,
+    );
+
+    document.addEventListener(
+      "visibilitychange",
+      manejarVisibilidad,
+    );
+
+    return () => {
+      window.clearTimeout(
+        temporizadorInicial,
+      );
+
+      window.clearInterval(
+        intervalo,
+      );
+
+      window.removeEventListener(
+        EVENTO_MENSAJES_ACTUALIZADOS,
+        manejarMensajesActualizados,
+      );
+
+      window.removeEventListener(
+        "focus",
+        manejarMensajesActualizados,
+      );
+
+      document.removeEventListener(
+        "visibilitychange",
+        manejarVisibilidad,
+      );
+    };
+  }, [cargarCantidadMensajes]);
 
   function manejarBusqueda(
     event: FormEvent<HTMLFormElement>,
@@ -179,10 +338,21 @@ function Topbar() {
   function cerrarSesion(): void {
     logout();
 
-    setMenuUsuarioAbierto(false);
-    setPanelNotificacionesAbierto(false);
+    setMenuUsuarioAbierto(
+      false,
+    );
+
+    setPanelNotificacionesAbierto(
+      false,
+    );
+
     setNotificaciones([]);
     setCantidadNoLeidas(0);
+
+    setCantidadMensajesNoLeidos(
+      0,
+    );
+
     setErrorNotificaciones("");
 
     navigate("/", {
@@ -190,8 +360,31 @@ function Topbar() {
     });
   }
 
+  function abrirMensajes(): void {
+    if (
+      !autenticado ||
+      !usuario
+    ) {
+      navigate("/login");
+      return;
+    }
+
+    setMenuUsuarioAbierto(
+      false,
+    );
+
+    setPanelNotificacionesAbierto(
+      false,
+    );
+
+    navigate("/mensajes");
+  }
+
   async function alternarNotificaciones(): Promise<void> {
-    if (!autenticado || !usuario) {
+    if (
+      !autenticado ||
+      !usuario
+    ) {
       navigate("/login");
       return;
     }
@@ -203,7 +396,9 @@ function Topbar() {
       nuevoEstado,
     );
 
-    setMenuUsuarioAbierto(false);
+    setMenuUsuarioAbierto(
+      false,
+    );
 
     if (nuevoEstado) {
       await cargarNotificaciones();
@@ -227,9 +422,13 @@ function Topbar() {
         );
 
         setNotificaciones(
-          (notificacionesActuales) =>
+          (
+            notificacionesActuales,
+          ) =>
             notificacionesActuales.map(
-              (notificacionActual) =>
+              (
+                notificacionActual,
+              ) =>
                 notificacionActual.notificacion_id ===
                 notificacion.notificacion_id
                   ? {
@@ -258,13 +457,17 @@ function Topbar() {
           notificacion.enlace,
         );
       }
-    } catch (errorDesconocido) {
+    } catch (
+      errorDesconocido
+    ) {
       const mensaje =
         errorDesconocido instanceof Error
           ? errorDesconocido.message
           : "No se pudo abrir la notificación";
 
-      setErrorNotificaciones(mensaje);
+      setErrorNotificaciones(
+        mensaje,
+      );
     }
   }
 
@@ -275,7 +478,9 @@ function Topbar() {
       await marcarTodasComoLeidas();
 
       setNotificaciones(
-        (notificacionesActuales) =>
+        (
+          notificacionesActuales,
+        ) =>
           notificacionesActuales.map(
             (notificacion) => ({
               ...notificacion,
@@ -285,13 +490,17 @@ function Topbar() {
       );
 
       setCantidadNoLeidas(0);
-    } catch (errorDesconocido) {
+    } catch (
+      errorDesconocido
+    ) {
       const mensaje =
         errorDesconocido instanceof Error
           ? errorDesconocido.message
           : "No se pudieron marcar las notificaciones como leídas";
 
-      setErrorNotificaciones(mensaje);
+      setErrorNotificaciones(
+        mensaje,
+      );
     }
   }
 
@@ -328,15 +537,30 @@ function Topbar() {
         aria-label="Acciones del usuario"
       >
         <button
-          className="topbar__icon-button"
+          className="topbar__icon-button topbar__notification-button"
           type="button"
-          aria-label="Mensajes"
-          title="Mensajes"
-          onClick={() =>
-            navigate("/mensajes")
+          aria-label={
+            cantidadMensajesNoLeidos >
+            0
+              ? `Mensajes, ${cantidadMensajesNoLeidos} sin leer`
+              : "Mensajes"
           }
+          title="Mensajes"
+          onClick={abrirMensajes}
         >
-          <MessageSquare size={19} />
+          <MessageSquare
+            size={19}
+          />
+
+          {cantidadMensajesNoLeidos >
+            0 && (
+            <span className="topbar__notification-badge">
+              {cantidadMensajesNoLeidos >
+              99
+                ? "99+"
+                : cantidadMensajesNoLeidos}
+            </span>
+          )}
         </button>
 
         <button
@@ -373,7 +597,8 @@ function Topbar() {
 
             {cantidadNoLeidas > 0 && (
               <span className="topbar__notification-badge">
-                {cantidadNoLeidas > 99
+                {cantidadNoLeidas >
+                99
                   ? "99+"
                   : cantidadNoLeidas}
               </span>
@@ -392,18 +617,22 @@ function Topbar() {
                   </strong>
 
                   <span>
-                    {cantidadNoLeidas} sin leer
+                    {cantidadNoLeidas} sin
+                    leer
                   </span>
                 </div>
 
-                {cantidadNoLeidas > 0 && (
+                {cantidadNoLeidas >
+                  0 && (
                   <button
                     type="button"
                     onClick={() =>
                       void manejarMarcarTodasComoLeidas()
                     }
                   >
-                    <CheckCheck size={15} />
+                    <CheckCheck
+                      size={15}
+                    />
                     Marcar todas
                   </button>
                 )}
@@ -414,18 +643,22 @@ function Topbar() {
                   className="topbar__notification-error"
                   role="alert"
                 >
-                  {errorNotificaciones}
+                  {
+                    errorNotificaciones
+                  }
                 </p>
               )}
 
               {cargandoNotificaciones ? (
                 <p className="topbar__notification-status">
-                  Cargando notificaciones...
+                  Cargando
+                  notificaciones...
                 </p>
               ) : notificaciones.length ===
                 0 ? (
                 <p className="topbar__notification-status">
-                  No tienes notificaciones.
+                  No tienes
+                  notificaciones.
                 </p>
               ) : (
                 <div className="topbar__notification-list">
@@ -454,7 +687,9 @@ function Topbar() {
                           }
                         >
                           <span className="topbar__notification-icon">
-                            <Bell size={16} />
+                            <Bell
+                              size={16}
+                            />
                           </span>
 
                           <span className="topbar__notification-content">
@@ -546,7 +781,9 @@ function Topbar() {
                 role="menu"
               >
                 <div className="topbar__user-menu-header">
-                  <UserRound size={18} />
+                  <UserRound
+                    size={18}
+                  />
 
                   <div>
                     <strong>
@@ -570,7 +807,9 @@ function Topbar() {
                         false,
                       );
 
-                      navigate("/admin");
+                      navigate(
+                        "/admin",
+                      );
                     }}
                   >
                     <LayoutDashboard
@@ -593,7 +832,9 @@ function Topbar() {
                     );
                   }}
                 >
-                  <Settings size={17} />
+                  <Settings
+                    size={17}
+                  />
                   Configuración
                 </button>
 
@@ -601,7 +842,9 @@ function Topbar() {
                   className="topbar__logout-button"
                   type="button"
                   role="menuitem"
-                  onClick={cerrarSesion}
+                  onClick={
+                    cerrarSesion
+                  }
                 >
                   <LogOut size={17} />
                   Cerrar sesión

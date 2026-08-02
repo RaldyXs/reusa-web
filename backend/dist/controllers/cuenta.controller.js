@@ -12,6 +12,22 @@ function obtenerUsuarioId(request) {
     }
     return usuarioId;
 }
+function obtenerMostrarContacto(valor) {
+    if (typeof valor === "boolean") {
+        return valor;
+    }
+    if (valor === 1 ||
+        valor === "1" ||
+        valor === "true") {
+        return true;
+    }
+    if (valor === 0 ||
+        valor === "0" ||
+        valor === "false") {
+        return false;
+    }
+    throw new Error("La preferencia de contacto no es válida");
+}
 function obtenerCodigoEstado(mensaje) {
     if (mensaje.includes("No se pudo identificar")) {
         return 401;
@@ -23,6 +39,7 @@ function obtenerCodigoEstado(mensaje) {
         return 401;
     }
     if (mensaje.includes("no es válido") ||
+        mensaje.includes("no es válida") ||
         mensaje.includes("es obligatorio") ||
         mensaje.includes("no puede superar") ||
         mensaje.includes("debe tener al menos") ||
@@ -59,7 +76,8 @@ async function obtenerPerfil(request, response) {
 async function actualizarPerfil(request, response) {
     try {
         const usuarioId = obtenerUsuarioId(request);
-        const perfil = await (0, cuenta_service_js_1.actualizarPerfilUsuario)(usuarioId, request.body.nombre, request.body.apellido, request.body.telefono, request.body.ubicacion);
+        const mostrarContacto = obtenerMostrarContacto(request.body.mostrarContacto);
+        const perfil = await (0, cuenta_service_js_1.actualizarPerfilUsuario)(usuarioId, request.body.nombre, request.body.apellido, request.body.telefono, request.body.ubicacion, mostrarContacto);
         response.status(200).json({
             ok: true,
             message: "Perfil actualizado correctamente",

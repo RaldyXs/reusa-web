@@ -18,6 +18,7 @@ export interface Articulo {
 
   estado?: "activo" | "vendido";
   archivado?: number;
-
+  eliminado?: number;
+  mostrar_contacto?: number;
   fecha_publicacion?: string | null;
 }

@@ -15,19 +15,28 @@ type ResultadoStoredProcedure = [
   ResultSetHeader,
 ];
 
-interface ArticuloIdRow extends RowDataPacket {
+type ArticuloConPrivacidad =
+  Articulo & {
+    mostrar_contacto?: number;
+  };
+
+interface ArticuloIdRow
+  extends RowDataPacket {
   articulo_id: number;
 }
 
-interface ImagenArticuloRow extends RowDataPacket {
+interface ImagenArticuloRow
+  extends RowDataPacket {
   url_imagen: string;
 }
 
-interface CantidadImagenesRow extends RowDataPacket {
+interface CantidadImagenesRow
+  extends RowDataPacket {
   cantidad: number;
 }
 
-interface ImagenGuardadaRow extends RowDataPacket {
+interface ImagenGuardadaRow
+  extends RowDataPacket {
   imagen_id: number;
   es_principal: number;
   orden: number;
@@ -37,10 +46,12 @@ export interface ActualizarArticuloDatos {
   titulo: string;
   descripcion: string;
   precio: number;
+
   condicion:
     | "nuevo"
     | "reparado"
     | "usado";
+
   ubicacion: string;
   categoriaId: number;
 }
@@ -81,6 +92,7 @@ export async function buscarArticulosEnBaseDeDatos(
     )
     .map((articulo) => ({
       ...articulo,
+
       archivado: Number(
         articulo.archivado ?? 0,
       ),
@@ -113,8 +125,9 @@ export async function obtenerArticulosPorVendedorId(
             u.apellido
           ) AS vendedor,
           (
-            SELECT ia.url_imagen
-            FROM imagenes_articulos ia
+            SELECT
+              ia.url_imagen
+            FROM imagenes_articulos AS ia
             WHERE ia.articulo_id =
               a.articulo_id
             ORDER BY
@@ -123,15 +136,19 @@ export async function obtenerArticulosPorVendedorId(
               ia.imagen_id ASC
             LIMIT 1
           ) AS imagen_principal
-        FROM articulos a
-        INNER JOIN categorias c
+        FROM articulos AS a
+
+        INNER JOIN categorias AS c
           ON c.categoria_id =
             a.categoria_id
-        INNER JOIN usuarios u
+
+        INNER JOIN usuarios AS u
           ON u.usuario_id =
             a.vendedor_id
+
         WHERE a.vendedor_id = ?
           AND a.eliminado = 0
+
         ORDER BY
           a.fecha_publicacion DESC
       `,
@@ -141,9 +158,11 @@ export async function obtenerArticulosPorVendedorId(
   return filas.map(
     (articulo) => ({
       ...articulo,
+
       archivado: Number(
         articulo.archivado ?? 0,
       ),
+
       imagenes: [],
     }),
   );
@@ -151,9 +170,11 @@ export async function obtenerArticulosPorVendedorId(
 
 export async function obtenerArticuloPorIdEnBaseDeDatos(
   articuloId: number,
-): Promise<Articulo | null> {
+): Promise<ArticuloConPrivacidad | null> {
   const [filas] =
-    await pool.execute<Articulo[]>(
+    await pool.execute<
+      ArticuloConPrivacidad[]
+    >(
       `
         SELECT
           a.articulo_id,
@@ -174,9 +195,11 @@ export async function obtenerArticuloPorIdEnBaseDeDatos(
             ' ',
             u.apellido
           ) AS vendedor,
+          u.mostrar_contacto,
           (
-            SELECT ia.url_imagen
-            FROM imagenes_articulos ia
+            SELECT
+              ia.url_imagen
+            FROM imagenes_articulos AS ia
             WHERE ia.articulo_id =
               a.articulo_id
             ORDER BY
@@ -185,15 +208,19 @@ export async function obtenerArticuloPorIdEnBaseDeDatos(
               ia.imagen_id ASC
             LIMIT 1
           ) AS imagen_principal
-        FROM articulos a
-        INNER JOIN categorias c
+        FROM articulos AS a
+
+        INNER JOIN categorias AS c
           ON c.categoria_id =
             a.categoria_id
-        INNER JOIN usuarios u
+
+        INNER JOIN usuarios AS u
           ON u.usuario_id =
             a.vendedor_id
+
         WHERE a.articulo_id = ?
           AND a.eliminado = 0
+
         LIMIT 1
       `,
       [articuloId],
@@ -210,7 +237,8 @@ export async function obtenerArticuloPorIdEnBaseDeDatos(
       ImagenArticuloRow[]
     >(
       `
-        SELECT url_imagen
+        SELECT
+          url_imagen
         FROM imagenes_articulos
         WHERE articulo_id = ?
         ORDER BY
@@ -223,9 +251,19 @@ export async function obtenerArticuloPorIdEnBaseDeDatos(
 
   return {
     ...articulo,
+
     archivado: Number(
-      articulo.archivado,
+      articulo.archivado ?? 0,
     ),
+
+    eliminado: Number(
+      articulo.eliminado ?? 0,
+    ),
+
+    mostrar_contacto: Number(
+      articulo.mostrar_contacto ?? 0,
+    ),
+
     imagenes:
       filasImagenes.map(
         (imagen) =>
@@ -385,7 +423,8 @@ export async function existeArticuloPorId(
       ArticuloIdRow[]
     >(
       `
-        SELECT articulo_id
+        SELECT
+          articulo_id
         FROM articulos
         WHERE articulo_id = ?
           AND eliminado = 0
@@ -405,11 +444,14 @@ export async function contarImagenesArticulo(
       CantidadImagenesRow[]
     >(
       `
-        SELECT COUNT(*) AS cantidad
+        SELECT
+          COUNT(*) AS cantidad
         FROM imagenes_articulos AS ia
+
         INNER JOIN articulos AS a
           ON a.articulo_id =
             ia.articulo_id
+
         WHERE ia.articulo_id = ?
           AND a.eliminado = 0
       `,
@@ -458,9 +500,11 @@ export async function guardarImagenesArticuloEnBaseDeDatos(
         [
           articuloId,
           imagen.urlImagen,
+
           imagen.esPrincipal
             ? 1
             : 0,
+
           imagen.orden,
           articuloId,
         ],
@@ -496,12 +540,15 @@ export async function eliminarImagenArticuloEnBaseDeDatos(
             ia.es_principal,
             ia.orden
           FROM imagenes_articulos AS ia
+
           INNER JOIN articulos AS a
             ON a.articulo_id =
               ia.articulo_id
+
           WHERE ia.articulo_id = ?
             AND ia.url_imagen = ?
             AND a.eliminado = 0
+
           LIMIT 1
         `,
         [
@@ -515,6 +562,7 @@ export async function eliminarImagenArticuloEnBaseDeDatos(
 
     if (!imagen) {
       await conexion.rollback();
+
       return false;
     }
 

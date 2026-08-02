@@ -16,6 +16,7 @@ export interface PerfilUsuario
   rol: "usuario" | "administrador";
   activo: number;
   fecha_registro: Date;
+  mostrar_contacto: number;
 }
 
 interface ContrasenaUsuarioRow
@@ -28,6 +29,7 @@ export interface ActualizarPerfilDatos {
   apellido: string;
   telefono: string | null;
   ubicacion: string | null;
+  mostrarContacto: boolean;
 }
 
 export async function obtenerPerfilUsuarioDesdeBaseDeDatos(
@@ -47,7 +49,8 @@ export async function obtenerPerfilUsuarioDesdeBaseDeDatos(
           ubicacion,
           rol,
           activo,
-          fecha_registro
+          fecha_registro,
+          mostrar_contacto
         FROM usuarios
         WHERE usuario_id = ?
         LIMIT 1
@@ -66,7 +69,8 @@ export async function obtenerContrasenaUsuarioDesdeBaseDeDatos(
       ContrasenaUsuarioRow[]
     >(
       `
-        SELECT contrasena
+        SELECT
+          contrasena
         FROM usuarios
         WHERE usuario_id = ?
         LIMIT 1
@@ -89,7 +93,8 @@ export async function actualizarPerfilUsuarioEnBaseDeDatos(
           nombre = ?,
           apellido = ?,
           telefono = ?,
-          ubicacion = ?
+          ubicacion = ?,
+          mostrar_contacto = ?
         WHERE usuario_id = ?
       `,
       [
@@ -97,6 +102,9 @@ export async function actualizarPerfilUsuarioEnBaseDeDatos(
         datos.apellido,
         datos.telefono,
         datos.ubicacion,
+        datos.mostrarContacto
+          ? 1
+          : 0,
         usuarioId,
       ],
     );
@@ -112,7 +120,8 @@ export async function actualizarContrasenaUsuarioEnBaseDeDatos(
     await pool.execute<ResultSetHeader>(
       `
         UPDATE usuarios
-        SET contrasena = ?
+        SET
+          contrasena = ?
         WHERE usuario_id = ?
       `,
       [

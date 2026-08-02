@@ -16,7 +16,8 @@ async function obtenerPerfilUsuarioDesdeBaseDeDatos(usuarioId) {
           ubicacion,
           rol,
           activo,
-          fecha_registro
+          fecha_registro,
+          mostrar_contacto
         FROM usuarios
         WHERE usuario_id = ?
         LIMIT 1
@@ -25,7 +26,8 @@ async function obtenerPerfilUsuarioDesdeBaseDeDatos(usuarioId) {
 }
 async function obtenerContrasenaUsuarioDesdeBaseDeDatos(usuarioId) {
     const [filas] = await database_js_1.pool.execute(`
-        SELECT contrasena
+        SELECT
+          contrasena
         FROM usuarios
         WHERE usuario_id = ?
         LIMIT 1
@@ -39,13 +41,17 @@ async function actualizarPerfilUsuarioEnBaseDeDatos(usuarioId, datos) {
           nombre = ?,
           apellido = ?,
           telefono = ?,
-          ubicacion = ?
+          ubicacion = ?,
+          mostrar_contacto = ?
         WHERE usuario_id = ?
       `, [
         datos.nombre,
         datos.apellido,
         datos.telefono,
         datos.ubicacion,
+        datos.mostrarContacto
+            ? 1
+            : 0,
         usuarioId,
     ]);
     return resultado.affectedRows > 0;
@@ -53,7 +59,8 @@ async function actualizarPerfilUsuarioEnBaseDeDatos(usuarioId, datos) {
 async function actualizarContrasenaUsuarioEnBaseDeDatos(usuarioId, nuevaContrasenaHash) {
     const [resultado] = await database_js_1.pool.execute(`
         UPDATE usuarios
-        SET contrasena = ?
+        SET
+          contrasena = ?
         WHERE usuario_id = ?
       `, [
         nuevaContrasenaHash,

@@ -13,12 +13,19 @@ async function obtenerContactoVendedorDesdeBaseDeDatos(articuloId) {
             u.apellido
           ) AS vendedor,
           u.email,
-          u.telefono
+          u.telefono,
+          u.mostrar_contacto
         FROM articulos AS a
+
         INNER JOIN usuarios AS u
           ON u.usuario_id =
             a.vendedor_id
+
         WHERE a.articulo_id = ?
+          AND a.eliminado = 0
+          AND u.activo = 1
+          AND u.mostrar_contacto = 1
+
         LIMIT 1
       `, [articuloId]);
     return filas[0] ?? null;
