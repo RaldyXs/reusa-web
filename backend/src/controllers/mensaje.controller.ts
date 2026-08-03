@@ -7,6 +7,11 @@ import type {
 } from "../middlewares/auth.middleware.js";
 
 import {
+  eliminarImagenDeCloudinary,
+  subirImagenACloudinary,
+} from "../services/cloudinary.service.js";
+
+import {
   crearOObtenerConversacion,
   editarMensaje,
   eliminarConversacion,
@@ -317,6 +322,10 @@ export async function registrarMensaje(
   request: RequestAutenticado,
   response: Response,
 ): Promise<void> {
+  let publicIdSubido:
+    | string
+    | null = null;
+
   try {
     const remitenteId =
       obtenerUsuarioId(request);
@@ -329,20 +338,38 @@ export async function registrarMensaje(
     const archivoImagen =
       request.file;
 
-    const urlImagen =
-      archivoImagen
-        ? `${request.protocol}://${request.get(
-            "host",
-          )}/uploads/mensajes/${
-            archivoImagen.filename
-          }`
-        : request.body.urlImagen;
+    let urlImagen:
+      | string
+      | null =
+      typeof request.body
+        .urlImagen === "string"
+        ? request.body
+            .urlImagen
+            .trim()
+        : null;
 
-    const tipo =
-      archivoImagen
-        ? "imagen"
-        : request.body.tipo ??
-          "texto";
+    let tipo =
+      request.body.tipo ??
+      "texto";
+
+    if (archivoImagen) {
+      const resultadoCloudinary =
+        await subirImagenACloudinary(
+          archivoImagen.buffer,
+          {
+            carpeta:
+              "reusa/mensajes",
+          },
+        );
+
+      publicIdSubido =
+        resultadoCloudinary.public_id;
+
+      urlImagen =
+        resultadoCloudinary.secure_url;
+
+      tipo = "imagen";
+    }
 
     const resultado =
       await enviarMensaje(
@@ -360,6 +387,21 @@ export async function registrarMensaje(
       mensaje: resultado,
     });
   } catch (errorDesconocido) {
+    if (publicIdSubido) {
+      try {
+        await eliminarImagenDeCloudinary(
+          publicIdSubido,
+        );
+      } catch (
+        errorEliminacion
+      ) {
+        console.error(
+          "No se pudo eliminar de Cloudinary la imagen del mensaje fallido:",
+          errorEliminacion,
+        );
+      }
+    }
+
     const mensaje =
       errorDesconocido instanceof Error
         ? errorDesconocido.message
@@ -446,6 +488,18 @@ export async function borrarMensaje(
     const mensajeId =
       obtenerMensajeId(request);
 
+    /*
+     * El servicio actual elimina la URL
+     * del mensaje en la base de datos.
+     * La eliminación física de Cloudinary
+     * requiere conservar el public_id antes
+     * de ejecutar eliminarMensaje.
+     *
+     * Por ahora, el mensaje se elimina de la
+     * conversación correctamente. Más adelante
+     * podemos mover esa limpieza al servicio
+     * usando el registro original del mensaje.
+     */
     await eliminarMensaje(
       mensajeId,
       usuarioId,

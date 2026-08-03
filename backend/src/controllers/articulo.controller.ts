@@ -1,6 +1,3 @@
-import fs from "node:fs/promises";
-import path from "node:path";
-
 import type {
   Request,
   Response,
@@ -26,6 +23,11 @@ import {
   eliminarImagenArticuloEnBaseDeDatos,
   guardarImagenesArticuloEnBaseDeDatos,
 } from "../repositories/articulo.repository.js";
+
+import {
+  eliminarImagenDeCloudinary,
+  subirImagenACloudinary,
+} from "../services/cloudinary.service.js";
 
 function obtenerMensajeError(
   error: unknown,
@@ -74,56 +76,70 @@ function usuarioPuedeGestionarArticulo(
   );
 }
 
-async function eliminarArchivos(
-  archivos: Express.Multer.File[],
-): Promise<void> {
-  await Promise.allSettled(
-    archivos.map(
-      (archivo) =>
-        fs.unlink(archivo.path),
-    ),
-  );
-}
-
-async function eliminarArchivoDesdeUrl(
+function obtenerPublicIdCloudinary(
   urlImagen: string,
-): Promise<void> {
+): string | null {
   try {
     const url = new URL(
       urlImagen,
     );
 
-    const nombreArchivo =
-      path.basename(
-        url.pathname,
+    const marcador =
+      "/upload/";
+
+    const indiceUpload =
+      url.pathname.indexOf(
+        marcador,
       );
 
-    const rutaArchivo =
-      path.resolve(
-        process.cwd(),
-        "uploads",
-        "articulos",
-        nombreArchivo,
-      );
-
-    await fs.unlink(
-      rutaArchivo,
-    );
-  } catch (error) {
-    const codigo =
-      typeof error === "object" &&
-      error !== null &&
-      "code" in error
-        ? String(error.code)
-        : "";
-
-    if (codigo !== "ENOENT") {
-      console.error(
-        "No se pudo eliminar el archivo de imagen:",
-        error,
-      );
+    if (indiceUpload < 0) {
+      return null;
     }
+
+    let rutaPublica =
+      url.pathname.slice(
+        indiceUpload +
+          marcador.length,
+      );
+
+    rutaPublica =
+      rutaPublica.replace(
+        /^v\d+\//,
+        "",
+      );
+
+    const ultimoPunto =
+      rutaPublica.lastIndexOf(
+        ".",
+      );
+
+    if (ultimoPunto > 0) {
+      rutaPublica =
+        rutaPublica.slice(
+          0,
+          ultimoPunto,
+        );
+    }
+
+    return decodeURIComponent(
+      rutaPublica,
+    );
+  } catch {
+    return null;
   }
+}
+
+async function eliminarImagenesSubidas(
+  publicIds: string[],
+): Promise<void> {
+  await Promise.allSettled(
+    publicIds.map(
+      (publicId) =>
+        eliminarImagenDeCloudinary(
+          publicId,
+        ),
+    ),
+  );
 }
 
 export async function obtenerArticulos(
@@ -681,12 +697,11 @@ export async function guardarImagenesArticulo(
       Express.Multer.File[]) ??
     [];
 
+  const publicIdsSubidos: string[] =
+    [];
+
   try {
     if (!request.usuario) {
-      await eliminarArchivos(
-        archivos,
-      );
-
       response.status(401).json({
         ok: false,
         message:
@@ -713,10 +728,6 @@ export async function guardarImagenesArticulo(
       );
 
     if (!articuloExistente) {
-      await eliminarArchivos(
-        archivos,
-      );
-
       response.status(404).json({
         ok: false,
         message:
@@ -732,10 +743,6 @@ export async function guardarImagenesArticulo(
         articuloExistente.vendedor_id,
       )
     ) {
-      await eliminarArchivos(
-        archivos,
-      );
-
       response.status(403).json({
         ok: false,
         message:
@@ -767,10 +774,6 @@ export async function guardarImagenesArticulo(
         archivos.length >
       5
     ) {
-      await eliminarArchivos(
-        archivos,
-      );
-
       response.status(400).json({
         ok: false,
         message:
@@ -780,19 +783,35 @@ export async function guardarImagenesArticulo(
       return;
     }
 
-    const baseUrl =
-      `${request.protocol}://${request.get(
-        "host",
-      )}`;
+    const resultadosCloudinary =
+      await Promise.all(
+        archivos.map(
+          (archivo) =>
+            subirImagenACloudinary(
+              archivo.buffer,
+              {
+                carpeta:
+                  "reusa/articulos",
+              },
+            ),
+        ),
+      );
+
+    publicIdsSubidos.push(
+      ...resultadosCloudinary.map(
+        (resultado) =>
+          resultado.public_id,
+      ),
+    );
 
     const imagenes =
-      archivos.map(
+      resultadosCloudinary.map(
         (
-          archivo,
+          resultado,
           indice,
         ) => ({
           urlImagen:
-            `${baseUrl}/uploads/articulos/${archivo.filename}`,
+            resultado.secure_url,
 
           esPrincipal:
             cantidadActual === 0 &&
@@ -829,8 +848,8 @@ export async function guardarImagenesArticulo(
         articuloActualizado,
     });
   } catch (error) {
-    await eliminarArchivos(
-      archivos,
+    await eliminarImagenesSubidas(
+      publicIdsSubidos,
     );
 
     response.status(400).json({
@@ -933,9 +952,16 @@ export async function eliminarImagenArticulo(
       return;
     }
 
-    await eliminarArchivoDesdeUrl(
-      urlImagen,
-    );
+    const publicId =
+      obtenerPublicIdCloudinary(
+        urlImagen,
+      );
+
+    if (publicId) {
+      await eliminarImagenDeCloudinary(
+        publicId,
+      );
+    }
 
     const articuloActualizado =
       await obtenerArticuloPorId(
