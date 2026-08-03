@@ -48,9 +48,16 @@ interface RespuestaCategorias {
   message?: string;
 }
 
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL ||
+  (
+    import.meta.env.PROD
+      ? "https://reusa-backend.onrender.com/api"
+      : "http://localhost:3000/api"
+  );
+
 const API_URL =
-  import.meta.env.VITE_API_URL ??
-  "http://localhost:3000/api";
+  `${API_BASE_URL}/admin`;
 
 const formularioInicial: FormularioArticulo = {
   titulo: "",
